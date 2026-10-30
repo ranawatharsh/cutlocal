@@ -22,7 +22,7 @@ Three audiences care disproportionately about local processing, and they are und
 2. **Privacy-sensitive work**: passport photos (a biometric ID), NDAs, unreleased products, medical/legal, creators who don't want their photos on a stranger's server.
 3. **Developers/privacy people** (r/privacy, Hacker News, self-hosting) — small in number, loud in reach, and they link to things.
 
-**The caveat:** the first-run experience is a 56 MB model download. That is the single biggest conversion risk on the whole site. Everything below assumes you treat that as the #1 product problem, not a footnote.
+**The caveat:** the first-run experience is a ~100 MB model download. That is the single biggest conversion risk on the whole site. Everything below assumes you treat that as the #1 product problem, not a footnote.
 
 ## 2. What was fixed in this version
 
@@ -31,7 +31,7 @@ Three audiences care disproportionately about local processing, and they are und
 | 44 MB model auto-downloaded on page load, blocking nothing but wasting everyone's data | Starts after first paint, skipped on Save-Data/2G/3G, real MB + ETA, instant on repeat visits |
 | Progress bar was faked with `setInterval` | Real byte progress from the library, weighted runtime → model |
 | Google Fonts request on a "zero data collected" site | System fonts only. No third-party requests except the model |
-| 176 MB model was hard-coded (`isnet`) | Fast (44 MB) / Balanced / Best selectable, Fast default |
+| 176 MB model was hard-coded (`isnet`) | Balanced (88 MB) default, Fast/Best selectable, alpha clean-up pass |
 | No SEO: one page, thin meta, no sitemap/robots/canonical/structured data | 5 indexable pages, FAQ + WebApplication schema, sitemap, robots, OG image, clean URLs |
 | "WebGPU ready" tag with no GPU path | Removed the false claim |
 | Memory leaks (object URLs never revoked, no cleanup) | URLs revoked on clear/remove/reprocess |
@@ -79,7 +79,7 @@ Do all of these in the first 5 days; each is 20–60 minutes of work.
 
 | Channel | What to post | Why it works |
 | --- | --- | --- |
-| **Product Hunt** | Launch Tue–Thu, 00:01 PST. Gallery: 4 images, first is the before/after. First comment = the privacy story + the 56 MB honest explanation. | One good day = 300–800 visits, plus a permanent backlink |
+| **Product Hunt** | Launch Tue–Thu, 00:01 PST. Gallery: 4 images, first is the before/after. First comment = the privacy story + the honest 100 MB explanation. | One good day = 300–800 visits, plus a permanent backlink |
 | **Show HN** | Title: "Show HN: Background remover that never uploads your images (WASM, offline)". Answer every technical comment. | Dev audience, high link value, they will check the Network tab and be impressed |
 | **r/privacy**, r/webdev, r/SideProject | Lead with the Network-tab verification, not the tool | These communities reward proof |
 | **r/Etsy**, r/AmazonSeller, r/dropship | "Free way to get pure-white product photos, batch ZIP, no sign-up" | Directly matches the pain and the white-background page |
@@ -127,14 +127,14 @@ If `image_dropped` is low, the dropzone or the demo is the problem. If `result_d
 ## 6. What I would *not* do
 
 - **Don't add sign-up, limits or watermarks** to "monetise later". They destroy the only differentiator you have.
-- **Don't pay for ads** at this stage. A 56 MB first-run download has a poor CAC payback and you have no revenue.
+- **Don't pay for ads** at this stage. A 100 MB first-run download has a poor CAC payback and you have no revenue.
 - **Don't chase "AI background remover" as a keyword.** You will lose to domains with 10 years of authority. Win the long tail and the communities first.
 - **Don't add 20 half-finished tools.** One tool that is obviously the best free option beats a suite nobody links to.
 - **Don't claim WebGPU/video/quality you don't ship.** The privacy audience checks.
 
 ## 7. Honest risk list
 
-1. **First-run friction** (56 MB) — mitigate with a demo, honest copy, and caching. This is the thing most likely to cap conversion at ~30%.
+1. **First-run friction** (~100 MB) — mitigate with a demo, honest copy, and caching. This is the thing most likely to cap conversion at ~30%. The `/resize-image` page is the one tool that has zero download, so use it as the low-friction entry point.
 2. **Cutout quality** vs remove.bg — IS-Net is good, not state of the art. Hair and thin edges will get complaints. Plan the better model.
 3. **AGPL** — publish your source or license commercially; don't discover this after traction.
 4. **CDN dependency** — the model comes from `staticimgly.com`. Self-host it if you want the "no third parties at all" claim to be literal.

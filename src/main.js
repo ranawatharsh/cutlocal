@@ -1,5 +1,5 @@
 import { loadEngine, removeBackground, onProgress, isReady, progressLabel, totalDownloadMB, MODELS, RUNTIME_MB } from './engine.js';
-import { DEFAULTS, PRESETS, drawResult, drawOriginal, loadImage, outDims, sourceRect, computeTrimBox } from './editor.js';
+import { DEFAULTS, PRESETS, drawResult, drawOriginal, loadImage, outDims, sourceRect, computeTrimBox, cleanCutout } from './editor.js';
 import { exportCard, exportZip, copyCard } from './download.js';
 
 // ── Small helpers ──────────────────────────────────────────────────────────
@@ -16,8 +16,9 @@ const state = {
   running: false,
   activeCard: null,
   engineBusy: false,
+  mode: 'cutout', // cutout | resize
   opts: { ...DEFAULTS },
-  model: 'fast',
+  model: 'balanced',
   device: 'cpu',
   ranWith: null,
   cardSeq: 0,
@@ -34,6 +35,8 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
   const year = $('#year');
   if (year) year.textContent = String(new Date().getFullYear());
+
+  initTheme();
 
   el = {
     dropzone: $('#dropzone'),
@@ -61,6 +64,8 @@ function init() {
     paddingVal: $('#padding-val'),
     shadow: $('#shadow'),
     trim: $('#trim'),
+    clean: $('#clean'),
+    fit: $('#fit'),
     format: $('#format'),
     qualityWrap: $('#quality-wrap'),
     quality: $('#quality'),
@@ -84,12 +89,11 @@ function init() {
   // Content-only pages (privacy) load this file but have no tool.
   if (!el.dropzone) return;
 
+  state.mode = document.body.dataset.mode === 'resize' ? 'resize' : 'cutout';
   restoreSettings();
   applyPreset(document.body.dataset.preset || 'default');
   syncControls();
   bindEvents();
-  onProgress(handleEngineProgress);
-  autoPreload();
 
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {
@@ -98,6 +102,41 @@ function init() {
       });
     });
   }
+
+  if (state.mode === 'resize') {
+    el.status.hidden = true;
+    return; // no model to warm up
+  }
+
+  onProgress(handleEngineProgress);
+  autoPreload();
+}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function initTheme() {
+  const btn = $('#theme-toggle');
+  if (!btn) return;
+
+  let current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+
+  const apply = (theme) => {
+    document.documentElement.dataset.theme = theme;
+    const next = theme === 'light' ? 'dark' : 'light';
+    btn.textContent = theme === 'light' ? '☾' : '☀';
+    btn.setAttribute('aria-label', `Switch to ${next} theme`);
+    btn.title = `Switch to ${next} theme`;
+  };
+
+  apply(current);
+  btn.addEventListener('click', () => {
+    current = current === 'light' ? 'dark' : 'light';
+    apply(current);
+    try {
+      localStorage.setItem('cutlocal:theme', current);
+    } catch {
+      /* private mode */
+    }
+  });
 }
 
 // ── Settings persistence ───────────────────────────────────────────────────
@@ -266,6 +305,21 @@ function bindPanel() {
     scheduleRender();
   });
 
+  el.clean.addEventListener('change', async () => {
+    state.opts.clean = el.clean.checked;
+    for (const card of state.cards) {
+      if (card.state !== 'done' || !card.cutoutBlob) continue;
+      await materializeCutout(card);
+      renderCard(card);
+    }
+    updateSizeNote();
+  });
+
+  el.fit.addEventListener('change', () => {
+    state.opts.fit = el.fit.value;
+    scheduleRender();
+  });
+
   el.format.addEventListener('change', () => {
     state.opts.format = el.format.value;
     syncFormat();
@@ -314,6 +368,7 @@ function setStatus(kind, title, desc, pct) {
 }
 
 function updateStatusIdle() {
+  if (state.mode === 'resize') return;
   if (state.engineBusy) return;
   if (isReady(state.model, state.device)) {
     setStatus('ready', 'AI engine ready', `${MODELS[state.model].label} model cached · drop images below`);
@@ -384,6 +439,7 @@ function handleEngineProgress(key, current, total) {
 }
 
 function maybePreload() {
+  if (state.mode === 'resize') return;
   if (isReady(state.model, state.device) || state.engineBusy || enginePromise) return;
   startEngine({ announce: false }).catch(() => {});
 }
@@ -522,9 +578,23 @@ async function runQueue() {
 
 async function processCard(card) {
   card.state = 'proc';
-  showProc(card, 'Removing…');
+  showProc(card, state.mode === 'resize' ? 'Resizing…' : 'Removing…');
 
   try {
+    if (state.mode === 'resize') {
+      // No AI: the source file is the image, the canvas just re-frames it.
+      card.cutoutUrl = URL.createObjectURL(card.file);
+      card.cutoutImg = await loadImage(card.cutoutUrl);
+      card.trimBox = null;
+      card.state = 'done';
+      hideProc(card);
+      card.el.querySelector('[data-act="dl"]').disabled = false;
+      card.el.querySelector('[data-act="copy"]').disabled = false;
+      renderCard(card);
+      updateSizeNote();
+      return;
+    }
+
     if (!isReady(state.model, state.device)) await startEngine({ announce: true });
     if (!isReady(state.model, state.device)) throw new Error('The AI engine is not available.');
 
@@ -534,8 +604,7 @@ async function processCard(card) {
     const blob = await removeBackground(card.file);
     card.cutoutBlob = blob;
     card.cutoutUrl = URL.createObjectURL(blob);
-    card.cutoutImg = await loadImage(card.cutoutUrl);
-    card.trimBox = computeTrimBox(card.cutoutImg);
+    await materializeCutout(card);
 
     card.state = 'done';
     state.ranWith = state.model;
@@ -552,6 +621,16 @@ async function processCard(card) {
   } finally {
     state.activeCard = null;
   }
+}
+
+/**
+ * Decodes the cut-out PNG and applies the optional alpha clean-up.
+ * Called again when the "Clean edges" toggle changes (no AI re-run).
+ */
+async function materializeCutout(card) {
+  const img = await loadImage(card.cutoutUrl);
+  card.cutoutImg = state.opts.clean && state.mode === 'cutout' ? cleanCutout(img) : img;
+  card.trimBox = state.mode === 'cutout' ? computeTrimBox(card.cutoutImg) : null;
 }
 
 function showProc(card, label) {
@@ -796,6 +875,8 @@ function syncControls() {
   el.paddingVal.textContent = `${o.padding}%`;
   el.shadow.checked = !!o.shadow;
   el.trim.checked = !!o.trim;
+  el.clean.checked = !!o.clean;
+  el.fit.value = o.fit || 'contain';
   el.quality.value = Math.round(o.quality * 100);
   el.qualityVal.textContent = el.quality.value;
   el.prefix.value = o.prefix || '';

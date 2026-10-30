@@ -12,6 +12,7 @@ const PAGES = [
   { file: 'white-background.html', path: '/white-background', priority: '0.9', changefreq: 'monthly' },
   { file: 'passport-photo.html', path: '/passport-photo', priority: '0.9', changefreq: 'monthly' },
   { file: 'transparent-png.html', path: '/transparent-png', priority: '0.9', changefreq: 'monthly' },
+  { file: 'resize-image.html', path: '/resize-image', priority: '0.8', changefreq: 'monthly' },
   { file: 'privacy.html', path: '/privacy', priority: '0.4', changefreq: 'yearly' },
 ]
 

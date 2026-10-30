@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resize Image Online — Free, Private, No Upload | CutLocal</title>
+<meta name="description" content="Resize images to 1080×1080, 1200×630 or any custom size in your browser. Crop, pad or stretch, batch resize and export as PNG, WebP or JPEG. Nothing is uploaded.">
+<link rel="canonical" href="%SITE_URL%/resize-image">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CutLocal">
+<meta property="og:title" content="Resize images privately, in your browser — CutLocal">
+<meta property="og:description" content="Resize, crop and pad images to any size. Batch export as PNG, WebP or JPEG. No upload, no account, instant.">
+<meta property="og:url" content="%SITE_URL%/resize-image">
+<meta property="og:image" content="%SITE_URL%/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Resize images privately, in your browser — CutLocal">
+<meta name="twitter:description" content="Resize, crop and pad images to any size. Batch export as PNG, WebP or JPEG. No upload, no account, instant.">
+<meta name="twitter:image" content="%SITE_URL%/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<!-- include: partials/theme.html -->
+<link rel="stylesheet" href="/src/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "CutLocal Image Resizer",
+  "url": "%SITE_URL%/resize-image",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any browser",
+  "description": "Resize, crop and pad images in the browser. Files are never uploaded.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "isPartOf": { "@type": "WebApplication", "name": "CutLocal", "url": "%SITE_URL%/" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does resizing upload my images to a server?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Resizing is a plain canvas operation, so the file is read into your browser tab, scaled and written back to disk. There is no upload and no AI download on this page — it works instantly, and it keeps working offline." }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between fit, fill and stretch?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Fit keeps the whole image visible and pads the empty space with your chosen background colour, so nothing is cut off. Fill scales the image until it covers the canvas and crops the overflow, which is what you usually want for Instagram squares and thumbnails. Stretch forces the exact width and height and distorts the aspect ratio, which is rarely what you want except for mockups." }
+    },
+    {
+      "@type": "Question",
+      "name": "What sizes can I choose?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Presets for the most common targets: longest side 2048 or 1024 px, square 1080 (Instagram, Amazon, marketplace), square 600 (passport), social 1200 × 630, or any custom width and height up to 6000 px. Enlarging a small image cannot add detail, so export close to the original size when quality matters." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I resize many images at once?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Drop as many files as you like, pick the size once, then download everything as a single ZIP with the original filenames kept. Everything happens on your machine, so there is no queue, no limit and no per-image cost." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which format should I export?",
+      "acceptedAnswer": { "@type": "Answer", "text": "PNG for lossless quality and transparency, WebP for much smaller files on the web with the same transparency support, JPEG for photos where a solid background is fine. The quality slider applies to WebP and JPEG only." }
+    }
+  ]
+}
+</script>
+</head>
+<body data-page="resize" data-mode="resize" data-preset="resize">
+<div class="wrap">
+  <!-- include: partials/nav.html -->
+
+  <header class="hero">
+    <h1>Resize images <span class="hl">without uploading them</span></h1>
+    <p class="hero-sub">Crop, pad or stretch to any size — 1080 squares, 1200 × 630 social cards, or an exact set of pixels. Instant, because there is nothing to download.</p>
+    <div class="hero-pills">
+      <span class="tag green">✓ No AI download</span>
+      <span class="tag green">✓ Batch + ZIP</span>
+      <span class="tag green">✓ PNG · WebP · JPEG</span>
+      <span class="tag">Works offline</span>
+    </div>
+  </header>
+
+  <!-- include: partials/app.html -->
+
+  <section class="section">
+    <h2>Pick a size, pick a fit, done</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01 / DROP</div>
+        <h3>Add your images</h3>
+        <p>Drag files in, paste from the clipboard or click to browse. Multiple images at once are fine.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">02 / SIZE</div>
+        <h3>Choose the target</h3>
+        <p>Use a preset — 1080 square, 600 square, 1200 × 630, longest side 2048 — or type an exact width and height.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">03 / FIT</div>
+        <h3>Fit, fill or stretch</h3>
+        <p>Fit pads with a background colour, fill crops the overflow, stretch distorts. Then export one file or the whole batch.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section prose">
+    <h2>Which option should I use?</h2>
+    <p><strong>Fill (crop)</strong> is right for almost everything that has to be a fixed shape: Instagram posts, YouTube thumbnails, marketplace squares, profile pictures. The image fills the canvas edge to edge and the overflowing sides are cropped.</p>
+    <p><strong>Fit (pad)</strong> keeps the entire image visible and fills the leftover space with your background colour — white for product listings, transparent for design assets. Nothing is cropped, so nothing is lost.</p>
+    <p><strong>Stretch</strong> changes the aspect ratio. It is only useful when a platform demands exact dimensions and you accept the distortion.</p>
+    <p>Two practical notes: downscaling is safe, upscaling cannot invent detail — a 400 px photo will still look soft at 2000 px. And if the file is for the web, export WebP: it is typically 25–35% smaller than JPEG at the same visual quality, with alpha transparency.</p>
+  </section>
+
+  <section class="section">
+    <h2>Questions people ask</h2>
+    <div class="faq">
+      <details><summary>Does resizing upload my images to a server?</summary><p>No. Resizing is a plain canvas operation, so the file is read into your browser tab, scaled and written back to disk. There is no upload and no AI download on this page — it works instantly, and it keeps working offline.</p></details>
+      <details><summary>What is the difference between fit, fill and stretch?</summary><p>Fit keeps the whole image visible and pads the empty space with your chosen background colour, so nothing is cut off. Fill scales the image until it covers the canvas and crops the overflow, which is what you usually want for Instagram squares and thumbnails. Stretch forces the exact width and height and distorts the aspect ratio, which is rarely what you want except for mockups.</p></details>
+      <details><summary>What sizes can I choose?</summary><p>Presets for the most common targets: longest side 2048 or 1024 px, square 1080 (Instagram, Amazon, marketplace), square 600 (passport), social 1200 × 630, or any custom width and height up to 6000 px. Enlarging a small image cannot add detail, so export close to the original size when quality matters.</p></details>
+      <details><summary>Can I resize many images at once?</summary><p>Yes. Drop as many files as you like, pick the size once, then download everything as a single ZIP with the original filenames kept. Everything happens on your machine, so there is no queue, no limit and no per-image cost.</p></details>
+      <details><summary>Which format should I export?</summary><p>PNG for lossless quality and transparency, WebP for much smaller files on the web with the same transparency support, JPEG for photos where a solid background is fine. The quality slider applies to WebP and JPEG only.</p></details>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Also on CutLocal</h2>
+    <div class="tools-grid">
+      <a class="tool-link" href="/"><strong>Remove backgrounds</strong><span>AI cutouts, all on your device</span></a>
+      <a class="tool-link" href="/white-background"><strong>White background photos</strong><span>Marketplace-ready squares</span></a>
+      <a class="tool-link" href="/passport-photo"><strong>Passport &amp; ID photos</strong><span>Plain white, correctly sized</span></a>
+      <a class="tool-link" href="/transparent-png"><strong>Transparent PNGs</strong><span>Logos, stickers, signatures</span></a>
+    </div>
+  </section>
+
+  <!-- include: partials/footer.html -->
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

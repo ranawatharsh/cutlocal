@@ -14,11 +14,13 @@
     <span class="status-dot" aria-hidden="true"></span>
     <div class="status-body">
       <strong id="status-title">AI engine not loaded yet</strong>
-      <span id="status-desc">Starts loading as soon as the page opens (~56 MB once), then it is cached and works offline.</span>
+      <span id="status-desc">Starts loading as soon as the page opens (~100 MB once), then it is cached and works offline.</span>
       <div class="bar" id="status-bar" hidden><span class="bar-fill" id="status-fill"></span></div>
     </div>
     <button type="button" class="btn btn-ghost" id="load-engine">Load AI now</button>
   </div>
+
+  <p class="instant-note resize-only">⚡ Resizing happens instantly — no AI, no download. The original file stays on your device.</p>
 
   <div class="panel" id="panel" hidden>
     <div class="panel-row">
@@ -57,6 +59,13 @@
         <input type="number" id="custom-w" value="1200" min="16" max="6000" step="1" aria-label="Width in pixels"> ×
         <input type="number" id="custom-h" value="1200" min="16" max="6000" step="1" aria-label="Height in pixels">
       </span>
+      <span class="resize-only">
+        <select id="fit" aria-label="How to fit the image">
+          <option value="contain">Fit (add background)</option>
+          <option value="cover">Fill (crop edges)</option>
+          <option value="stretch">Stretch (distort)</option>
+        </select>
+      </span>
       <span class="dim-note" id="size-note"></span>
     </div>
 
@@ -64,8 +73,9 @@
       <span class="plabel">Padding</span>
       <input type="range" id="padding" min="0" max="25" step="1" value="0" aria-label="Padding around the subject">
       <output id="padding-val">0%</output>
-      <label class="check"><input type="checkbox" id="shadow"> Drop shadow</label>
-      <label class="check"><input type="checkbox" id="trim"> Trim transparent edges</label>
+      <label class="check cutout-only"><input type="checkbox" id="shadow"> Drop shadow</label>
+      <label class="check cutout-only"><input type="checkbox" id="trim"> Trim transparent edges</label>
+      <label class="check cutout-only"><input type="checkbox" id="clean" checked> Clean edges</label>
     </div>
 
     <div class="panel-row">
@@ -76,13 +86,15 @@
         <option value="image/jpeg">JPEG</option>
       </select>
       <span id="quality-wrap" hidden>Quality <input type="range" id="quality" min="40" max="100" step="1" value="92" aria-label="JPEG/WebP quality"> <output id="quality-val">92</output></span>
-      <span class="plabel" style="width:auto">Model</span>
-      <select id="model" aria-label="AI model">
-        <option value="fast">Fast · ~56 MB</option>
-        <option value="balanced">Balanced · ~100 MB</option>
-        <option value="best">Best · ~188 MB</option>
-      </select>
-      <button type="button" class="chip" id="rerun" hidden>↻ Re-run AI</button>
+      <span class="cutout-only model-inline">
+        <span class="plabel" style="width:auto">Model</span>
+        <select id="model" aria-label="AI model">
+          <option value="fast">Fast · ~56 MB</option>
+          <option value="balanced">Balanced · ~100 MB · recommended</option>
+          <option value="best">Best · ~188 MB</option>
+        </select>
+        <button type="button" class="chip" id="rerun" hidden>↻ Re-run AI</button>
+      </span>
     </div>
 
     <div class="panel-row">

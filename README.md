@@ -12,7 +12,8 @@ Live pages: `/` (main tool), `/white-background`, `/passport-photo`, `/transpare
 - **Batch** processing with ZIP export, original filenames kept
 - **Backgrounds**: transparent, solid colour, custom colour, or your own image (with blur)
 - **Resize**: original, longest side 512/1024/2048, square 1080, square 600, social 1200×630, custom W×H
-- **Framing**: padding slider, drop shadow, trim transparent edges
+- **Framing**: padding slider, drop shadow, trim transparent edges, alpha clean-up
+- **Resize-only mode** (`/resize-image`): no AI, instant — fit / fill / stretch, all presets
 - **Export**: PNG / WebP / JPEG with quality control, filename prefix
 - **Compare slider** per image (drag between original and result)
 - **Copy to clipboard**, **paste from clipboard** (Ctrl/⌘+V), drag & drop anywhere
@@ -65,6 +66,7 @@ index.html              main tool + content + structured data
 white-background.html   SEO landing page (preset: white, 1080², JPEG)
 passport-photo.html     SEO landing page (preset: white, 600², JPEG)
 transparent-png.html    SEO landing page (preset: transparent, PNG)
+resize-image.html       resize-only tool (data-mode="resize", no AI at all)
 privacy.html            trust page (no tool, content only)
 partials/               shared HTML (nav, app shell, footer) injected at build
 src/main.js             UI, state, queue, settings
@@ -80,7 +82,7 @@ scripts/gen-assets.mjs  regenerates og.png + icons (needs `npm i -D sharp`)
 ### Adding another landing page
 
 1. Copy a page like `white-background.html`, change `<title>`, description, canonical, JSON-LD and copy.
-2. Set `<body data-preset="...">` and add the preset to `PRESETS` in `src/editor.js` if it needs new defaults.
+2. Set `<body data-preset="...">` (and `data-mode="resize"` for a no-AI page) and add the preset to `PRESETS` in `src/editor.js` if it needs new defaults.
 3. Add the file to `PAGES` in `vite.config.js` so it is built and listed in `sitemap.xml`.
 4. Link it from `partials/nav.html` / `partials/footer.html`.
 
@@ -94,7 +96,11 @@ Measured from the 1.7.0 distribution, not from the README:
 | Balanced | `isnet_fp16`   | 88 MB | 12 MB | ~100 MB |
 | Best     | `isnet`        | 176 MB | 12 MB | ~188 MB |
 
-Fast is the default. Balanced/Best sharpen edges on hair and thin objects but cost more download on first use. Everything is cached afterwards, and the service worker keeps the engine files so offline use works.
+Balanced is the default because the quantized Fast model produces a visibly noisy mask on real photos (roughly 40–60% alpha across the whole frame, which reads as speckle on a white background). Fast is kept as a data-saver option. Balanced and Best are visually identical in our tests, so Balanced is the quality/price sweet spot.
+
+Every result also goes through a smoothstep alpha clean-up (`cleanCutout` in `src/editor.js`), which removes low-confidence haze without eating the soft edges of hair. It can be switched off per session with the "Clean edges" checkbox without re-running the AI.
+
+Everything is cached afterwards, and the service worker keeps the engine files so offline use works.
 
 To self-host the model files (fully offline-capable hosting, no third-party CDN), call `preload`/`removeBackground` with `publicPath` pointing at your own copy of the `background-removal-data` package — see `src/engine.js`.
 

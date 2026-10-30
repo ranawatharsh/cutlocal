@@ -17,6 +17,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
+<!-- include: partials/theme.html -->
 <link rel="stylesheet" href="/src/style.css">
 <script type="application/ld+json">
 {
@@ -45,7 +46,7 @@
     <h2>What does get downloaded</h2>
     <ul>
       <li>The page itself: HTML, one CSS file and a small JavaScript bundle from this domain.</li>
-      <li>The AI engine, which starts downloading as soon as the page opens so it is ready when you are: the ONNX model (about 44 MB on the Fast setting) and the ONNX Runtime WebAssembly build (about 12 MB), served from <code>staticimgly.com</code>. It is cached, so this happens once.</li>
+      <li>The AI engine, which starts downloading as soon as the page opens so it is ready when you are: the ONNX model (about 88 MB on the default Balanced setting, 44 MB on Fast) and the ONNX Runtime WebAssembly build (about 12 MB), served from <code>staticimgly.com</code>. It is cached, so this happens once.</li>
       <li>Nothing else. There is no font CDN, no analytics script, no ad network, no pixel.</li>
     </ul>
     <p>If you are on a metered connection, turn on your browser's <strong>Save-Data</strong> setting (or Lite mode) and the download will wait until you press "Load AI now" or add an image.</p>

@@ -24,12 +24,15 @@ export const DEFAULTS = {
   bg: 'transparent', // transparent | color | image
   color: '#ffffff',
   bgImage: null, // HTMLImageElement
+  backgroundBlur: false,
   preset: 'original',
   customW: 1200,
   customH: 1200,
   padding: 0,
   shadow: false,
   trim: false,
+  clean: true,
+  fit: 'contain', // contain | cover | stretch (resize mode)
   format: 'image/png',
   quality: 0.92,
   prefix: '',
@@ -41,6 +44,7 @@ export const PRESETS = {
   white: { bg: 'color', color: '#ffffff', preset: 'sq1080', padding: 4, format: 'image/jpeg' },
   passport: { bg: 'color', color: '#ffffff', preset: 'sq600', padding: 6, format: 'image/jpeg' },
   transparent: { bg: 'transparent', preset: 'original', format: 'image/png' },
+  resize: { bg: 'color', color: '#ffffff', preset: 'original', format: 'image/png', fit: 'contain' },
 };
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
@@ -82,6 +86,50 @@ export function outDims(srcW, srcH, opts) {
     h = Math.round(h * cap);
   }
   return { w: Math.max(1, w), h: Math.max(1, h) };
+}
+
+/**
+ * Cleans up the model's raw alpha channel.
+ *
+ * Segmentation models output a soft, low-confidence mask: haze at 3–10%
+ * alpha around the subject, and speckled patches where the background is
+ * busy. Left alone, that reads as grey dust when composited on white.
+ *
+ * A smoothstep curve kills near-zero haze, makes confident pixels fully
+ * opaque, and keeps genuine semi-transparency (hair, fur) in between.
+ * ~60 ms for a 12 MP photo, once per image.
+ */
+export function cleanCutout(img) {
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  if (!w || !h) return img;
+  if (w * h > 40_000_000) return img; // absurdly large: skip rather than freeze
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const frame = ctx.getImageData(0, 0, w, h);
+  const data = frame.data;
+
+  const lo = 12;
+  const hi = 208;
+  const span = hi - lo;
+  const lut = new Uint8Array(256);
+  for (let a = 0; a < 256; a++) {
+    let t = (a - lo) / span;
+    t = t <= 0 ? 0 : t >= 1 ? 1 : t;
+    lut[a] = Math.round(t * t * (3 - 2 * t) * 255);
+  }
+
+  for (let i = 3; i < data.length; i += 4) {
+    const a = data[i];
+    if (a !== 0 && a !== 255) data[i] = lut[a];
+  }
+
+  ctx.putImageData(frame, 0, 0);
+  return canvas;
 }
 
 /**
@@ -231,25 +279,51 @@ export function drawResult(canvas, img, opts, maxDim = 0, trimBox) {
 
   const boxW = Math.max(1, W - padX * 2);
   const boxH = Math.max(1, H - padY * 2);
-  const scale = Math.min(boxW / srcW, boxH / srcH);
-  const dw = srcW * scale;
-  const dh = srcH * scale;
-  const dx = (W - dw) / 2;
-  const dy = (H - dh) / 2;
+  const geom = fitGeometry(opts.fit, padX, padY, boxW, boxH, srcW, srcH);
+  const { dx, dy, dw, dh } = geom;
+
+  ctx.save();
+  if (geom.crop) {
+    // "cover" overflows the content box — clip so it cannot paint the padding.
+    ctx.beginPath();
+    ctx.rect(padX, padY, boxW, boxH);
+    ctx.clip();
+  }
 
   if (opts.shadow) {
-    ctx.save();
     const unit = Math.min(W, H);
     ctx.shadowColor = 'rgba(0,0,0,0.42)';
     ctx.shadowBlur = unit * 0.055;
     ctx.shadowOffsetY = unit * 0.03;
     ctx.drawImage(img, sx, sy, srcW, srcH, dx, dy, dw, dh);
-    ctx.restore();
   } else {
     ctx.drawImage(img, sx, sy, srcW, srcH, dx, dy, dw, dh);
   }
 
+  ctx.restore();
   return { w: W, h: H };
+}
+
+/**
+ * Where the source lands inside the content box.
+ * contain = letterbox, cover = fill and crop, stretch = distort.
+ */
+function fitGeometry(fit, padX, padY, boxW, boxH, srcW, srcH) {
+  if (fit === 'stretch') {
+    return { dx: padX, dy: padY, dw: boxW, dh: boxH, crop: false };
+  }
+  const sx = boxW / srcW;
+  const sy = boxH / srcH;
+  const scale = fit === 'cover' ? Math.max(sx, sy) : Math.min(sx, sy);
+  const dw = srcW * scale;
+  const dh = srcH * scale;
+  return {
+    dx: padX + (boxW - dw) / 2,
+    dy: padY + (boxH - dh) / 2,
+    dw,
+    dh,
+    crop: fit === 'cover',
+  };
 }
 
 /**
@@ -276,12 +350,20 @@ export function drawOriginal(canvas, img, opts, maxDim = 0, trimBox) {
   const spec = SIZE_PRESETS[opts.preset] || SIZE_PRESETS.original;
   const fixed = spec.mode === 'square' || spec.mode === 'exact';
   const p = clamp(opts.padding || 0, 0, 40) / 100;
-  const boxW = Math.max(1, W - (fixed ? W * p * 2 : 0));
-  const boxH = Math.max(1, H - (fixed ? H * p * 2 : 0));
-  const scale = Math.min(boxW / srcW, boxH / srcH);
-  const dw = srcW * scale;
-  const dh = srcH * scale;
-  ctx.drawImage(img, sx, sy, srcW, srcH, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  const padX = fixed ? W * p : 0;
+  const padY = fixed ? H * p : 0;
+  const boxW = Math.max(1, W - padX * 2);
+  const boxH = Math.max(1, H - padY * 2);
+  const geom = fitGeometry(opts.fit, padX, padY, boxW, boxH, srcW, srcH);
+
+  ctx.save();
+  if (geom.crop) {
+    ctx.beginPath();
+    ctx.rect(padX, padY, boxW, boxH);
+    ctx.clip();
+  }
+  ctx.drawImage(img, sx, sy, srcW, srcH, geom.dx, geom.dy, geom.dw, geom.dh);
+  ctx.restore();
 
   return { w: W, h: H };
 }

@@ -1,0 +1,7 @@
+<script>
+  /* Applies the saved colour theme before the first paint (no flash). */
+  try {
+    var t = localStorage.getItem('cutlocal:theme');
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
