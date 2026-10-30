@@ -1,5 +1,51 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Pretty URLs: /white-background serves white-background.html
+[build.processing]
+  skip_processing = false
+
 [[headers]]
   for = "/*"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Extensionless URLs are the canonical ones used in the sitemap.
+[[redirects]]
+  from = "/white-background.html"
+  to = "/white-background"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/passport-photo.html"
+  to = "/passport-photo"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/transparent-png.html"
+  to = "/transparent-png"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/privacy.html"
+  to = "/privacy"
+  status = 301
+  force = true

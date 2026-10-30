@@ -1,322 +1,831 @@
-import { removeBackground } from '@imgly/background-removal';
-import JSZip from 'jszip';
+import { loadEngine, removeBackground, onProgress, isReady, progressLabel, totalDownloadMB, MODELS } from './engine.js';
+import { DEFAULTS, PRESETS, drawResult, drawOriginal, loadImage, outDims, sourceRect, computeTrimBox } from './editor.js';
+import { exportCard, exportZip, copyCard } from './download.js';
 
-// ── State ──────────────────────────────────────────────────────────────────
-let bgMode = 'transparent';
-let bgImageUrl = null;
-let cards = [];
-let queue = [];
-let running = false;
-let totalDone = 0;
+// ── Small helpers ──────────────────────────────────────────────────────────
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const MAX_PREVIEW = 1280; // px — previews never need full resolution
+const STORE_KEY = 'cutlocal:settings:v1';
+const PROC_HTML =
+  '<span class="ring"></span><span class="proc-label">Queued</span><span class="proc-pct">0%</span>';
 
-// ── Boot: auto-load on page open ───────────────────────────────────────────
-async function boot() {
-  let fakeP = 0;
-  const fill = document.getElementById('sfill');
-  const fakeTimer = setInterval(() => {
-    fakeP = Math.min(fakeP + Math.random() * 4, 88);
-    fill.style.width = fakeP + '%';
-  }, 180);
+const state = {
+  cards: [],
+  queue: [],
+  running: false,
+  activeCard: null,
+  engineBusy: false,
+  opts: { ...DEFAULTS },
+  model: 'fast',
+  device: 'cpu',
+  ranWith: null,
+  cardSeq: 0,
+};
 
-  try {
-    document.getElementById('sdot').className = 'sdot loading';
+let el = {};
+let enginePromise = null;
+let renderTimer = 0;
+let toastTimer = 0;
 
-    // Warm up — pre-fetch model config so first image is instant
-    await removeBackground(await createTinyBlob(), {
-      model: 'isnet',
-      output: { format: 'image/png', type: 'foreground' },
-      progress: (key, cur, tot) => {
-        if (tot > 0) {
-          const real = Math.round((cur / tot) * 100);
-          fill.style.width = Math.max(fakeP, real) + '%';
-          document.getElementById('sdesc').textContent =
-            'Downloading AI model… ' + real + '% (cached after this)';
-        }
-      }
+// ── Boot ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+
+function init() {
+  const year = $('#year');
+  if (year) year.textContent = String(new Date().getFullYear());
+
+  el = {
+    dropzone: $('#dropzone'),
+    fileinput: $('#fileinput'),
+    bgInput: $('#bg-input'),
+    status: $('#status'),
+    statusTitle: $('#status-title'),
+    statusDesc: $('#status-desc'),
+    statusBar: $('#status-bar'),
+    statusFill: $('#status-fill'),
+    loadEngineBtn: $('#load-engine'),
+    panel: $('#panel'),
+    swatches: $('#swatches'),
+    cpick: $('#cpick'),
+    bgImageBtn: $('#bg-image-btn'),
+    bgClearImage: $('#bg-clear-image'),
+    bgBlur: $('#bg-blur'),
+    bgBlurWrap: $('#bg-blur-wrap'),
+    sizePreset: $('#size-preset'),
+    customSize: $('#custom-size'),
+    customW: $('#custom-w'),
+    customH: $('#custom-h'),
+    sizeNote: $('#size-note'),
+    padding: $('#padding'),
+    paddingVal: $('#padding-val'),
+    shadow: $('#shadow'),
+    trim: $('#trim'),
+    format: $('#format'),
+    qualityWrap: $('#quality-wrap'),
+    quality: $('#quality'),
+    qualityVal: $('#quality-val'),
+    prefix: $('#prefix'),
+    model: $('#model'),
+    rerun: $('#rerun'),
+    actrow: $('#actrow'),
+    clearBtn: $('#clear-btn'),
+    addMoreBtn: $('#add-more-btn'),
+    zipBtn: $('#zip-btn'),
+    rmeta: $('#rmeta'),
+    rtitle: $('#rtitle'),
+    rnote: $('#rnote'),
+    grid: $('#grid'),
+    toast: $('#toast'),
+    year,
+  };
+
+  // Content-only pages (privacy) load this file but have no tool.
+  if (!el.dropzone) return;
+
+  restoreSettings();
+  applyPreset(document.body.dataset.preset || 'default');
+  syncControls();
+  bindEvents();
+  onProgress(handleEngineProgress);
+
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* offline support is a bonus, never a requirement */
+      });
     });
-
-    clearInterval(fakeTimer);
-    fill.style.width = '100%';
-    if (navigator.gpu) document.getElementById('gpu-tag').style.display = '';
-
-    setTimeout(() => {
-      document.getElementById('sdot').className = 'sdot ready';
-      document.getElementById('stitle').textContent = 'Ready — drop your images below';
-      document.getElementById('sdesc').textContent = 'AI loaded · images never leave your device';
-      document.getElementById('sprog').style.display = 'none';
-      document.getElementById('dropzone').classList.remove('disabled');
-    }, 350);
-
-  } catch (e) {
-    clearInterval(fakeTimer);
-    document.getElementById('sdot').className = 'sdot error';
-    document.getElementById('stitle').textContent = 'Failed to load';
-    document.getElementById('sdesc').textContent = e.message + ' — refresh to retry';
-    document.getElementById('sprog').style.display = 'none';
-    console.error(e);
   }
 }
 
-// tiny 1×1 transparent PNG blob to warm up the model
-async function createTinyBlob() {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 4;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, 4, 4);
-  return new Promise(res => canvas.toBlob(res, 'image/png'));
+// ── Settings persistence ───────────────────────────────────────────────────
+function restoreSettings() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.model in MODELS) state.model = saved.model;
+    if (typeof saved.quality === 'number') state.opts.quality = saved.quality;
+    if (typeof saved.prefix === 'string') state.opts.prefix = saved.prefix;
+    if (typeof saved.shadow === 'boolean') state.opts.shadow = saved.shadow;
+  } catch {
+    /* corrupt storage should never break the tool */
+  }
 }
 
-// ── Event wiring ───────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const dz = document.getElementById('dropzone');
-  const fi = document.getElementById('fileinput');
+function saveSettings() {
+  try {
+    localStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({
+        model: state.model,
+        quality: state.opts.quality,
+        prefix: state.opts.prefix,
+        shadow: state.opts.shadow,
+      })
+    );
+  } catch {
+    /* private mode / quota */
+  }
+}
 
-  dz.addEventListener('click', () => fi.click());
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
-  fi.addEventListener('change', () => handleFiles(fi.files));
+function applyPreset(name) {
+  Object.assign(state.opts, PRESETS[name] || {});
+}
 
-  document.getElementById('add-more-btn').addEventListener('click', () => fi.click());
-  document.getElementById('clear-btn').addEventListener('click', clearAll);
-  document.getElementById('zip-btn').addEventListener('click', downloadAll);
+// ── Events ─────────────────────────────────────────────────────────────────
+function bindEvents() {
+  const dz = el.dropzone;
 
-  document.querySelectorAll('.swatch[data-bg]').forEach(sw =>
-    sw.addEventListener('click', () => setBg(sw.dataset.bg, sw))
-  );
-  document.getElementById('cpick').addEventListener('change', function () { setBgColor(this.value); });
-  document.getElementById('bg-img-btn').addEventListener('click', () => document.getElementById('bginput').click());
-  document.getElementById('bginput').addEventListener('change', function () { setBgImage(this); });
-  document.getElementById('reprocess-btn').addEventListener('click', reprocessAll);
-
-  boot();
-});
-
-// ── File handling ──────────────────────────────────────────────────────────
-function handleFiles(files) {
-  const imgs = [...files].filter(f => f.type.startsWith('image/'));
-  if (!imgs.length) return;
-
-  document.getElementById('dropzone').style.display = 'none';
-  document.getElementById('bgrow').classList.add('show');
-  document.getElementById('actrow').classList.add('show');
-  document.getElementById('rmeta').classList.add('show');
-
-  imgs.forEach(f => {
-    const id = 'c' + Date.now() + Math.random().toString(36).slice(2, 6);
-    const card = buildCard(id, f);
-    cards.push(card);
-    queue.push(card);
+  dz.addEventListener('click', () => {
+    // Start the model download while the file picker is open.
+    maybePreload();
+    el.fileinput.click();
   });
+  dz.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      maybePreload();
+      el.fileinput.click();
+    }
+  });
+
+  el.fileinput.addEventListener('change', () => {
+    addFiles(el.fileinput.files);
+    el.fileinput.value = '';
+  });
+  el.addMoreBtn.addEventListener('click', () => el.fileinput.click());
+  el.clearBtn.addEventListener('click', clearAll);
+  el.zipBtn.addEventListener('click', downloadZip);
+  el.loadEngineBtn.addEventListener('click', () => startEngine({ announce: true }).catch(() => {}));
+  el.rerun.addEventListener('click', reprocessAll);
+
+  // Whole-window drag & drop
+  let dragDepth = 0;
+  window.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return;
+    dragDepth++;
+    dz.classList.add('over');
+  });
+  window.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) dz.classList.remove('over');
+  });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => {
+    if (!e.dataTransfer) return;
+    e.preventDefault();
+    dragDepth = 0;
+    dz.classList.remove('over');
+    addFiles(e.dataTransfer.files);
+  });
+
+  // Paste an image from the clipboard
+  document.addEventListener('paste', (e) => {
+    const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    e.preventDefault();
+    addFiles(files);
+  });
+
+  bindPanel();
+}
+
+function bindPanel() {
+  $$('#swatches [data-bg], #swatches [data-color]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.bg === 'transparent') setBackground('transparent');
+      else setBackground('color', btn.dataset.color);
+    });
+  });
+
+  el.cpick.addEventListener('input', () => setBackground('color', el.cpick.value));
+
+  el.bgImageBtn.addEventListener('click', () => el.bgInput.click());
+  el.bgInput.addEventListener('change', async () => {
+    const file = el.bgInput.files?.[0];
+    el.bgInput.value = '';
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    try {
+      state.opts.bgImage = await loadImage(url);
+      state.opts.bg = 'image';
+      state.opts.backgroundBlur = false;
+      syncSwatches();
+      scheduleRender();
+      toast('Image background applied');
+    } catch {
+      toast('That background image could not be loaded');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+  el.bgClearImage.addEventListener('click', () => {
+    state.opts.bgImage = null;
+    state.opts.backgroundBlur = false;
+    if (state.opts.bg === 'image') state.opts.bg = 'transparent';
+    syncSwatches();
+    scheduleRender();
+  });
+
+  el.bgBlur.addEventListener('change', () => {
+    state.opts.backgroundBlur = el.bgBlur.checked;
+    scheduleRender();
+  });
+
+  el.sizePreset.addEventListener('change', () => {
+    state.opts.preset = el.sizePreset.value;
+    el.customSize.hidden = el.sizePreset.value !== 'custom';
+    scheduleRender();
+  });
+  el.customW.addEventListener('input', () => {
+    state.opts.customW = el.customW.value;
+    scheduleRender();
+  });
+  el.customH.addEventListener('input', () => {
+    state.opts.customH = el.customH.value;
+    scheduleRender();
+  });
+
+  el.padding.addEventListener('input', () => {
+    state.opts.padding = Number(el.padding.value);
+    el.paddingVal.textContent = `${state.opts.padding}%`;
+    scheduleRender();
+  });
+
+  el.shadow.addEventListener('change', () => {
+    state.opts.shadow = el.shadow.checked;
+    saveSettings();
+    scheduleRender();
+  });
+
+  el.trim.addEventListener('change', () => {
+    state.opts.trim = el.trim.checked;
+    scheduleRender();
+  });
+
+  el.format.addEventListener('change', () => {
+    state.opts.format = el.format.value;
+    syncFormat();
+    scheduleRender();
+  });
+
+  el.quality.addEventListener('input', () => {
+    state.opts.quality = Number(el.quality.value) / 100;
+    el.qualityVal.textContent = el.quality.value;
+    saveSettings();
+  });
+
+  el.prefix.addEventListener('input', () => {
+    state.opts.prefix = el.prefix.value;
+    saveSettings();
+  });
+
+  el.model.addEventListener('change', () => {
+    state.model = el.model.value;
+    enginePromise = null;
+    saveSettings();
+    updateStatusIdle();
+    updateMeta();
+  });
+}
+
+// ── Engine ─────────────────────────────────────────────────────────────────
+function setStatus(kind, title, desc, pct) {
+  el.status.dataset.state = kind;
+  el.statusTitle.textContent = title;
+  el.statusDesc.textContent = desc;
+  if (pct === undefined) {
+    el.statusBar.hidden = true;
+  } else {
+    el.statusBar.hidden = false;
+    el.statusFill.style.width = `${Math.max(2, Math.min(100, pct))}%`;
+  }
+  el.loadEngineBtn.hidden = kind === 'loading' || kind === 'ready';
+}
+
+function updateStatusIdle() {
+  if (state.engineBusy) return;
+  if (isReady(state.model, state.device)) {
+    setStatus('ready', 'AI engine ready', `Cached · ${MODELS[state.model].label} model · nothing is uploaded`);
+  } else {
+    setStatus(
+      'idle',
+      'AI engine not loaded yet',
+      `It downloads once (~${totalDownloadMB(state.model)} MB) when you add an image, then it is cached and works offline.`
+    );
+  }
+}
+
+function handleEngineProgress(key, current, total) {
+  if (!total) return;
+  const ratio = Math.min(1, current / total);
+
+  if (key.startsWith('compute')) {
+    const pct = Math.round(ratio * 100);
+    if (state.activeCard) setCardProgress(state.activeCard, pct);
+    return;
+  }
+
+  // Runtime files arrive first (~20% of the total), then the model.
+  const weighted = key.includes('/models/') ? 20 + ratio * 80 : ratio * 20;
+  if (state.engineBusy) {
+    setStatus('loading', progressLabel(key), `${Math.round(weighted)}% · one-time download, cached afterwards`, weighted);
+  }
+  if (state.activeCard) setCardProgress(state.activeCard, Math.round(weighted));
+}
+
+function maybePreload() {
+  if (isReady(state.model, state.device) || state.engineBusy) return;
+  const conn = navigator.connection;
+  if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;
+  startEngine({ announce: false }).catch(() => {});
+}
+
+/**
+ * Single entry point for the model download. Concurrent callers await the
+ * same promise instead of starting a second download.
+ */
+function startEngine({ announce = true } = {}) {
+  if (enginePromise) {
+    if (announce && !state.engineBusy) announceEngine();
+    return enginePromise;
+  }
+
+  state.engineBusy = true;
+  announceEngine();
+
+  enginePromise = loadEngine(state.model, state.device)
+    .then(() => {
+      state.engineBusy = false;
+      updateStatusIdle();
+    })
+    .catch((err) => {
+      state.engineBusy = false;
+      enginePromise = null;
+      setStatus(
+        'error',
+        'The AI engine could not load',
+        `${err?.message || 'Network error'} — check your connection and try again.`
+      );
+      throw err;
+    });
+
+  return enginePromise;
+}
+
+function announceEngine() {
+  setStatus('loading', 'Loading AI engine…', `About ${totalDownloadMB(state.model)} MB, downloaded once and cached`, 0);
+}
+
+// ── Files + queue ──────────────────────────────────────────────────────────
+const MAX_FILE_MB = 80;
+
+function addFiles(fileList) {
+  const files = [...(fileList || [])];
+  const images = files.filter((f) => f.type.startsWith('image/'));
+  if (!images.length) {
+    toast(files.length ? 'Those files are not images' : 'No images found');
+    return;
+  }
+
+  let tooBig = 0;
+  const accepted = images.filter((f) => {
+    if (f.size > MAX_FILE_MB * 1024 * 1024) {
+      tooBig++;
+      return false;
+    }
+    return true;
+  });
+
+  if (!accepted.length) {
+    toast(`Images must be under ${MAX_FILE_MB} MB`);
+    return;
+  }
+
+  for (const file of accepted) {
+    const card = createCard(file);
+    state.cards.push(card);
+    state.queue.push(card);
+  }
+
+  el.dropzone.hidden = true;
+  el.panel.hidden = false;
+  el.actrow.hidden = false;
+  el.rmeta.hidden = false;
 
   updateMeta();
   runQueue();
+
+  if (tooBig) toast(`${tooBig} image${tooBig > 1 ? 's were' : ' was'} too large (max ${MAX_FILE_MB} MB)`);
 }
 
-// ── Queue ──────────────────────────────────────────────────────────────────
 async function runQueue() {
-  if (running) return;
-  running = true;
-  while (queue.length) await processCard(queue.shift());
-  running = false;
-  if (totalDone > 0) {
-    document.getElementById('zip-btn').disabled = false;
-    document.getElementById('reprocess-btn').style.display = '';
+  if (state.running) return;
+  state.running = true;
+
+  while (state.queue.length) {
+    const card = state.queue.shift();
+    if (!state.cards.includes(card)) continue; // removed while queued
+    await processCard(card);
+    updateMeta();
   }
+
+  state.running = false;
+  state.activeCard = null;
+  updateMeta();
 }
 
 async function processCard(card) {
   card.state = 'proc';
-  card.proc.style.display = 'flex';
-  card.pct.textContent = '—';
+  showProc(card, 'Removing…');
 
   try {
-    const blob = new Blob([await card.file.arrayBuffer()], { type: card.file.type });
-    card.resultBlob = await removeBackground(blob, {
-      model: 'isnet',
-      progress: (key, cur, tot) => {
-        if (tot > 0) card.pct.textContent = Math.round((cur / tot) * 100) + '%';
-      },
-      output: { format: 'image/png', type: 'foreground' }
-    });
+    if (!isReady(state.model, state.device)) await startEngine({ announce: true });
+    if (!isReady(state.model, state.device)) throw new Error('The AI engine is not available.');
+
+    state.activeCard = card;
+    setCardProgress(card, 0);
+
+    const blob = await removeBackground(card.file);
+    card.cutoutBlob = blob;
+    card.cutoutUrl = URL.createObjectURL(blob);
+    card.cutoutImg = await loadImage(card.cutoutUrl);
+    card.trimBox = computeTrimBox(card.cutoutImg);
+
     card.state = 'done';
-    totalDone++;
-    await renderCard(card);
-    card.proc.style.display = 'none';
-    card.dlbtn.disabled = false;
-    card.dlbtn.addEventListener('click', () => dlCard(card));
-    updateMeta();
-  } catch (e) {
+    state.ranWith = state.model;
+    hideProc(card);
+    card.el.querySelector('[data-act="dl"]').disabled = false;
+    card.el.querySelector('[data-act="copy"]').disabled = false;
+    renderCard(card);
+    if (card.view !== 'result') renderOriginal(card);
+    updateSizeNote();
+  } catch (err) {
     card.state = 'error';
-    card.proc.style.display = 'none';
-    card.el.querySelector('.card-img').innerHTML =
-      '<div class="card-err"><div class="card-err-icon">⚠</div><p>' + (e.message || 'Processing failed') + '</p></div>';
-    console.error(e);
+    showError(card, err?.message || 'Something went wrong while processing this image.');
+    console.error(err);
+  } finally {
+    state.activeCard = null;
   }
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-async function renderCard(card) {
-  const img = new Image();
-  await new Promise((res, rej) => {
-    img.onload = res; img.onerror = rej;
-    img.src = URL.createObjectURL(card.resultBlob);
-  });
-
-  const c = card.canvas;
-  c.width = img.naturalWidth; c.height = img.naturalHeight;
-  const ctx = c.getContext('2d');
-
-  if (bgMode === 'transparent') {
-    ctx.clearRect(0, 0, c.width, c.height);
-  } else if (bgMode === 'image' && bgImageUrl) {
-    const bg = new Image();
-    await new Promise(r => { bg.onload = r; bg.src = bgImageUrl; });
-    ctx.drawImage(bg, 0, 0, c.width, c.height);
-  } else {
-    ctx.fillStyle = bgMode;
-    ctx.fillRect(0, 0, c.width, c.height);
-  }
-  ctx.drawImage(img, 0, 0);
-  URL.revokeObjectURL(img.src);
-
-  c.style.display = 'block';
-  card.origImg.style.display = 'none';
-  card.el.querySelectorAll('.ctab').forEach(t => t.classList.toggle('on', t.dataset.t === 'result'));
+function showProc(card, label) {
+  const proc = card.el.querySelector('.proc');
+  proc.innerHTML = PROC_HTML;
+  proc.hidden = false;
+  card.el.querySelector('.proc-label').textContent = label;
+  card.el.querySelector('.proc-pct').textContent = '0%';
 }
 
-async function reprocessAll() {
-  for (const c of cards.filter(c => c.state === 'done')) await renderCard(c);
+function setCardProgress(card, pct) {
+  const node = card.el.querySelector('.proc-pct');
+  if (node && card.state === 'proc') node.textContent = `${pct}%`;
 }
 
-// ── BG Controls ────────────────────────────────────────────────────────────
-function setBg(val, el) {
-  bgMode = val; bgImageUrl = null;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
-  if (el) el.classList.add('on');
-  reprocessAll();
+function hideProc(card) {
+  card.el.querySelector('.proc').hidden = true;
 }
 
-function setBgColor(val) {
-  bgMode = val; bgImageUrl = null;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
-  document.getElementById('cpick-disp').style.background = val;
-  reprocessAll();
+function showError(card, message) {
+  const proc = card.el.querySelector('.proc');
+  proc.hidden = false;
+  proc.innerHTML = `<div class="proc-err"><p>${escapeHtml(message)}</p><p style="margin-top:8px">Remove the card and try a smaller image.</p></div>`;
 }
 
-function setBgImage(input) {
-  const f = input.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = e => {
-    bgMode = 'image'; bgImageUrl = e.target.result;
-    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
-    reprocessAll();
-  };
-  r.readAsDataURL(f);
-}
-
-// ── Download ───────────────────────────────────────────────────────────────
-function dlCard(card) {
-  card.canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = card.file.name.replace(/\.[^.]+$/, '') + '_nobg.png';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, 'image/png');
-}
-
-async function downloadAll() {
-  const done = cards.filter(c => c.state === 'done');
-  if (!done.length) return;
-  const btn = document.getElementById('zip-btn');
-  btn.disabled = true; btn.textContent = '⏳ Zipping...';
-
-  const zip = new JSZip();
-  const folder = zip.folder('cutlocal');
-  for (const card of done) {
-    await new Promise(res => {
-      card.canvas.toBlob(blob => {
-        folder.file(card.file.name.replace(/\.[^.]+$/, '') + '_nobg.png', blob);
-        res();
-      }, 'image/png');
-    });
-  }
-  const content = await zip.generateAsync({ type: 'blob' });
-  const url = URL.createObjectURL(content);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'cutlocal_export.zip'; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 3000);
-  btn.disabled = false; btn.textContent = '↓ Download ZIP';
-}
-
-// ── Clear ──────────────────────────────────────────────────────────────────
-function clearAll() {
-  cards = []; queue = []; running = false; totalDone = 0;
-  document.getElementById('grid').innerHTML = '';
-  document.getElementById('dropzone').style.display = '';
-  document.getElementById('bgrow').classList.remove('show');
-  document.getElementById('actrow').classList.remove('show');
-  document.getElementById('rmeta').classList.remove('show');
-  document.getElementById('zip-btn').disabled = true;
-  document.getElementById('reprocess-btn').style.display = 'none';
+function escapeHtml(str) {
+  return String(str).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
 }
 
 // ── Card ───────────────────────────────────────────────────────────────────
-function buildCard(id, file) {
-  const el = document.createElement('div');
-  el.className = 'card'; el.id = id;
-  el.innerHTML = `
+function createCard(file) {
+  const id = `c${++state.cardSeq}`;
+  const node = document.createElement('article');
+  node.className = 'card';
+  node.dataset.id = id;
+  node.innerHTML = `
     <div class="card-tabs">
-      <button class="ctab on" data-t="result">Result</button>
-      <button class="ctab" data-t="orig">Original</button>
+      <button type="button" class="on" data-view="result">Result</button>
+      <button type="button" data-view="compare">Compare</button>
+      <button type="button" data-view="original">Original</button>
     </div>
-    <div class="card-img">
-      <canvas style="display:none"></canvas>
-      <img alt="" style="display:block">
-      <div class="proc-ov">
-        <div class="proc-ring"></div>
-        <div class="proc-lbl">Processing</div>
-        <div class="proc-pct">—</div>
-      </div>
+    <div class="stage" data-view="result">
+      <canvas class="cv-orig"></canvas>
+      <canvas class="cv-result on"></canvas>
+      <div class="handle" hidden></div>
+      <div class="proc">${PROC_HTML}</div>
     </div>
     <div class="card-foot">
-      <div class="card-name">${file.name}</div>
-      <button class="card-dl" disabled>↓ PNG</button>
+      <span class="card-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+      <span class="card-dims" data-role="dims"></span>
+      <button type="button" class="icon-btn" data-act="copy" title="Copy to clipboard" aria-label="Copy to clipboard" disabled>⧉</button>
+      <button type="button" class="icon-btn primary" data-act="dl" title="Download" aria-label="Download" disabled>↓</button>
+      <button type="button" class="icon-btn" data-act="remove" title="Remove from list" aria-label="Remove from list">✕</button>
     </div>`;
 
-  document.getElementById('grid').prepend(el);
+  const card = {
+    id,
+    file,
+    el: node,
+    stage: node.querySelector('.stage'),
+    resultCanvas: node.querySelector('.cv-result'),
+    origCanvas: node.querySelector('.cv-orig'),
+    cutoutImg: null,
+    cutoutBlob: null,
+    cutoutUrl: null,
+    origImg: null,
+    origUrl: null,
+    trimBox: null,
+    split: 50,
+    state: 'queued',
+    view: 'result',
+  };
 
-  const canvas = el.querySelector('canvas');
-  const origImg = el.querySelector('img');
-  origImg.src = URL.createObjectURL(file);
-
-  el.querySelectorAll('.ctab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      el.querySelectorAll('.ctab').forEach(t => t.classList.remove('on'));
-      tab.classList.add('on');
-      if (tab.dataset.t === 'result' && canvas.width > 0) {
-        canvas.style.display = 'block'; origImg.style.display = 'none';
-      } else {
-        origImg.style.display = 'block'; canvas.style.display = 'none';
-      }
-    });
+  node.querySelectorAll('[data-view]').forEach((btn) => {
+    btn.addEventListener('click', () => setView(card, btn.dataset.view));
   });
 
-  return {
-    id, file, el, canvas, origImg,
-    proc: el.querySelector('.proc-ov'),
-    pct: el.querySelector('.proc-pct'),
-    dlbtn: el.querySelector('.card-dl'),
-    resultBlob: null, state: 'pending'
+  node.querySelector('[data-act="dl"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await exportCard(card, state.opts);
+      toast('Saved');
+    } catch (err) {
+      toast(err?.message || 'Download failed');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  node.querySelector('[data-act="copy"]').addEventListener('click', async () => {
+    try {
+      await copyCard(card, state.opts);
+      toast('Copied to clipboard');
+    } catch (err) {
+      toast(err?.message || 'Copy failed');
+    }
+  });
+
+  node.querySelector('[data-act="remove"]').addEventListener('click', () => removeCard(card));
+
+  bindCompare(card);
+  el.grid.prepend(node);
+  return card;
+}
+
+function bindCompare(card) {
+  const stage = card.stage;
+  let dragging = false;
+
+  const setSplit = (clientX) => {
+    const rect = stage.getBoundingClientRect();
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    card.split = Math.max(0, Math.min(100, pct));
+    stage.style.setProperty('--split', `${card.split}%`);
   };
+
+  stage.addEventListener('pointerdown', (e) => {
+    if (card.view !== 'compare') return;
+    dragging = true;
+    stage.setPointerCapture?.(e.pointerId);
+    setSplit(e.clientX);
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (dragging) setSplit(e.clientX);
+  });
+  const stop = () => { dragging = false; };
+  stage.addEventListener('pointerup', stop);
+  stage.addEventListener('pointercancel', stop);
+}
+
+function setView(card, view) {
+  card.view = view;
+  card.stage.dataset.view = view;
+  card.el.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+
+  card.resultCanvas.classList.toggle('on', view !== 'original');
+  card.origCanvas.classList.toggle('on', view === 'original' || view === 'compare');
+  card.el.querySelector('.handle').hidden = view !== 'compare';
+
+  if (view !== 'result') renderOriginal(card);
+}
+
+async function ensureOriginal(card) {
+  if (card.origImg) return card.origImg;
+  if (!card.origUrl) card.origUrl = URL.createObjectURL(card.file);
+  card.origImg = await loadImage(card.origUrl);
+  return card.origImg;
+}
+
+async function renderOriginal(card) {
+  try {
+    const img = await ensureOriginal(card);
+    if (card.view === 'result') return; // user switched back while decoding
+    drawOriginal(card.origCanvas, img, state.opts, MAX_PREVIEW, card.trimBox);
+  } catch {
+    /* the compare view is optional — never break the card over it */
+  }
+}
+
+function renderCard(card) {
+  if (!card.cutoutImg) return;
+  drawResult(card.resultCanvas, card.cutoutImg, state.opts, MAX_PREVIEW, card.trimBox);
+
+  const rect = sourceRect(card.cutoutImg, state.opts, card.trimBox);
+  const full = outDims(rect.sw, rect.sh, state.opts);
+  const label = card.el.querySelector('[data-role="dims"]');
+  if (label) label.textContent = `${full.w}×${full.h}`;
+
+  if (card.view !== 'result') renderOriginal(card);
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    for (const card of state.cards) {
+      if (card.state === 'done') renderCard(card);
+    }
+    updateSizeNote();
+  }, 40);
+}
+
+function updateSizeNote() {
+  const sample = state.cards.find((c) => c.state === 'done' && c.cutoutImg);
+  if (!sample) {
+    if (el.sizeNote) el.sizeNote.textContent = '';
+    return;
+  }
+  const full = outDims(
+    sourceRect(sample.cutoutImg, state.opts, sample.trimBox).sw,
+    sourceRect(sample.cutoutImg, state.opts, sample.trimBox).sh,
+    state.opts
+  );
+  el.sizeNote.textContent = `→ ${full.w} × ${full.h} px`;
+}
+
+// ── Settings UI sync ───────────────────────────────────────────────────────
+function setBackground(mode, color) {
+  state.opts.bg = mode;
+  if (color) state.opts.color = color;
+  if (mode !== 'image') state.opts.backgroundBlur = false;
+  syncSwatches();
+  scheduleRender();
+}
+
+function syncSwatches() {
+  const { bg, color } = state.opts;
+  const target = String(color || '').toLowerCase();
+
+  $$('#swatches [data-bg]').forEach((b) => b.classList.toggle('is-on', bg === 'transparent'));
+  $$('#swatches [data-color]').forEach((b) =>
+    b.classList.toggle('is-on', bg === 'color' && b.dataset.color.toLowerCase() === target)
+  );
+
+  const custom = el.swatches.querySelector('.swatch-custom');
+  const matchesPreset = $$('#swatches [data-color]').some(
+    (b) => b.dataset.color.toLowerCase() === target
+  );
+  custom.classList.toggle('is-on', bg === 'color' && !matchesPreset);
+  el.bgClearImage.hidden = bg !== 'image';
+  el.bgBlurWrap.hidden = bg !== 'image';
+  el.bgBlur.checked = !!state.opts.backgroundBlur;
+  el.bgImageBtn.classList.toggle('is-on', bg === 'image');
+}
+
+function syncFormat() {
+  el.format.value = state.opts.format;
+  el.qualityWrap.hidden = state.opts.format === 'image/png';
+}
+
+function syncControls() {
+  const o = state.opts;
+  el.model.value = state.model;
+  el.sizePreset.value = o.preset;
+  el.customSize.hidden = o.preset !== 'custom';
+  el.customW.value = o.customW;
+  el.customH.value = o.customH;
+  el.padding.value = o.padding;
+  el.paddingVal.textContent = `${o.padding}%`;
+  el.shadow.checked = !!o.shadow;
+  el.trim.checked = !!o.trim;
+  el.quality.value = Math.round(o.quality * 100);
+  el.qualityVal.textContent = el.quality.value;
+  el.prefix.value = o.prefix || '';
+  el.cpick.value = /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : '#a855f7';
+  syncSwatches();
+  syncFormat();
+  updateStatusIdle();
+}
+
+// ── Batch actions ──────────────────────────────────────────────────────────
+async function downloadZip() {
+  const done = state.cards.filter((c) => c.state === 'done');
+  if (!done.length) return;
+
+  el.zipBtn.disabled = true;
+  try {
+    await exportZip(done, state.opts, (p) => {
+      el.zipBtn.textContent = `⏳ Packaging ${Math.round(p * 100)}%`;
+    });
+    toast(`Saved ${done.length} image${done.length > 1 ? 's' : ''} as ZIP`);
+  } catch (err) {
+    toast(err?.message || 'ZIP export failed');
+  } finally {
+    updateMeta();
+  }
+}
+
+async function reprocessAll() {
+  if (state.running) return;
+  el.rerun.hidden = true;
+  state.ranWith = null;
+
+  for (const card of state.cards) {
+    card.state = 'queued';
+    if (card.cutoutUrl) URL.revokeObjectURL(card.cutoutUrl);
+    card.cutoutUrl = null;
+    card.cutoutImg = null;
+    card.cutoutBlob = null;
+    card.trimBox = null;
+    showProc(card, 'Queued');
+    card.el.querySelector('[data-act="dl"]').disabled = true;
+    card.el.querySelector('[data-act="copy"]').disabled = true;
+  }
+
+  state.queue = [...state.cards];
+  updateMeta();
+  await runQueue();
+}
+
+function removeCard(card) {
+  state.cards = state.cards.filter((c) => c !== card);
+  state.queue = state.queue.filter((c) => c !== card);
+  if (card.cutoutUrl) URL.revokeObjectURL(card.cutoutUrl);
+  if (card.origUrl) URL.revokeObjectURL(card.origUrl);
+  card.el.remove();
+  if (!state.cards.length) resetUI();
+  else updateMeta();
+  updateSizeNote();
+}
+
+function clearAll() {
+  for (const card of state.cards) {
+    if (card.cutoutUrl) URL.revokeObjectURL(card.cutoutUrl);
+    if (card.origUrl) URL.revokeObjectURL(card.origUrl);
+    card.el.remove();
+  }
+  state.cards = [];
+  state.queue = [];
+  resetUI();
+}
+
+function resetUI() {
+  el.grid.innerHTML = '';
+  el.dropzone.hidden = false;
+  el.panel.hidden = true;
+  el.actrow.hidden = true;
+  el.rmeta.hidden = true;
+  el.rerun.hidden = true;
+  el.zipBtn.disabled = true;
+  el.zipBtn.textContent = '↓ Download ZIP';
+  el.sizeNote.textContent = '';
+  state.ranWith = null;
 }
 
 function updateMeta() {
-  const total = cards.length;
-  const done = cards.filter(c => c.state === 'done').length;
-  document.getElementById('rtitle').innerHTML = `<span>${total}</span> image${total !== 1 ? 's' : ''}`;
-  document.getElementById('rnote').textContent = done < total ? `${done}/${total} done` : `All ${total} done ✓`;
+  const total = state.cards.length;
+  const done = state.cards.filter((c) => c.state === 'done').length;
+  const failed = state.cards.filter((c) => c.state === 'error').length;
+
+  el.actrow.hidden = total === 0;
+  el.rmeta.hidden = total === 0;
+  el.rtitle.innerHTML = `<b>${total}</b> image${total === 1 ? '' : 's'}`;
+
+  if (!total) {
+    el.rnote.textContent = '';
+    el.zipBtn.disabled = true;
+    el.zipBtn.textContent = '↓ Download ZIP';
+    return;
+  }
+
+  const parts = [done < total ? `${done}/${total} done` : `All ${total} done ✓`];
+  if (failed) parts.push(`${failed} failed`);
+  if (total > 1) parts.push('filenames kept in ZIP');
+  el.rnote.textContent = parts.join(' · ');
+
+  el.zipBtn.disabled = done === 0;
+  el.zipBtn.textContent = done ? `↓ Download ZIP (${done})` : '↓ Download ZIP';
+  el.rerun.hidden = !(done && state.ranWith && state.ranWith !== state.model);
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(message) {
+  el.toast.textContent = message;
+  el.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2600);
 }

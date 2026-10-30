@@ -2,206 +2,162 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CutLocal — Private Background Removal</title>
-<meta name="description" content="Remove image backgrounds instantly in your browser. No uploads. No servers. 100% private. Free forever.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#0a0a0a;--surface:#111;--surface2:#161616;--border:#1e1e1e;--border2:#2a2a2a;--accent:#c8f135;--accent2:#3bf0a0;--red:#ff4d4d;--text:#f0f0f0;--muted:#555;--muted2:#888;--r:10px}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,241,53,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(200,241,53,.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
-.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:0 24px 80px}
-nav{display:flex;align-items:center;justify-content:space-between;padding:24px 0 48px}
-.logo{font-size:1.3rem;font-weight:800;letter-spacing:-.5px}
-.logo .cut{color:var(--accent)}
-.nav-right{display:flex;align-items:center;gap:8px}
-.tag{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.06em;padding:4px 10px;border-radius:100px;border:1px solid var(--border2);color:var(--muted2)}
-.tag.lime{background:rgba(200,241,53,.08);color:var(--accent);border-color:rgba(200,241,53,.2)}
-.tag.green{background:rgba(59,240,160,.08);color:var(--accent2);border-color:rgba(59,240,160,.2)}
-.hero{text-align:center;padding-bottom:64px}
-.hero h1{font-size:clamp(2.8rem,7vw,5rem);font-weight:800;line-height:.98;letter-spacing:-3px;margin-bottom:20px}
-.hero h1 .hl{color:var(--accent)}
-.hero h1 .dim{color:var(--muted);font-size:.72em;display:block;letter-spacing:-1.5px;margin-top:6px}
-.hero-sub{font-size:.95rem;color:var(--muted2);max-width:440px;margin:0 auto 28px;line-height:1.65;font-weight:400}
-.hero-pills{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
-.sbar{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:20px}
-.sdot{width:9px;height:9px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background .3s}
-.sdot.loading{background:var(--accent);animation:blink 1.1s ease-in-out infinite}
-.sdot.ready{background:var(--accent2)}
-.sdot.error{background:var(--red)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.stext{flex:1;font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted2);min-width:0}
-.stext strong{display:block;font-size:.8rem;color:var(--text);margin-bottom:2px;font-family:'Syne',sans-serif;font-weight:700}
-.sprogress{height:2px;background:var(--border2);border-radius:2px;margin-top:8px;overflow:hidden}
-.sprogress-fill{height:100%;background:var(--accent);width:0%;transition:width .25s;border-radius:2px}
-.bgrow{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:13px 18px;display:none;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
-.bgrow.show{display:flex}
-.bglabel{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
-.swatches{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.swatch{width:26px;height:26px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:transform .15s,border-color .15s;flex-shrink:0}
-.swatch:hover{transform:scale(1.2)}
-.swatch.on{border-color:var(--accent);box-shadow:0 0 0 1px rgba(200,241,53,.25)}
-.swatch-checker{background:repeating-conic-gradient(#1e1e1e 0% 25%,#141414 0% 50%) 0 0/10px 10px}
-.cpick-wrap{position:relative;width:26px;height:26px}
-.cpick-wrap input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;padding:0}
-.cpick-display{width:26px;height:26px;border-radius:6px;border:2px dashed var(--border2);pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--muted2)}
-.ghost-btn{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.04em;padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap}
-.ghost-btn:hover{border-color:var(--accent);color:var(--accent)}
-.actrow{display:none;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:14px;flex-wrap:wrap}
-.actrow.show{display:flex}
-.btn{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;padding:8px 16px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.btn:hover{color:var(--text);background:var(--surface)}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.btn.lime{background:var(--accent);color:#000;border-color:var(--accent)}
-.btn.lime:hover{opacity:.85;color:#000}
-.btn.danger:hover{color:var(--red);border-color:rgba(255,77,77,.3);background:rgba(255,77,77,.04)}
-#dropzone{border:1.5px dashed var(--border2);border-radius:14px;padding:72px 32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;margin-bottom:28px}
-#dropzone:hover,#dropzone.over{border-color:var(--accent);background:rgba(200,241,53,.025)}
-#dropzone.disabled{opacity:.35;pointer-events:none}
-.dz-hex{font-size:2.8rem;margin-bottom:14px;display:block;filter:grayscale(.6)}
-.dz-title{font-size:1.25rem;font-weight:800;letter-spacing:-.5px;margin-bottom:7px}
-.dz-sub{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);margin-bottom:18px}
-.dz-formats{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
-.dz-fmt{font-family:'DM Mono',monospace;font-size:.6rem;padding:3px 8px;border-radius:4px;border:1px solid var(--border2);color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
-.rmeta{display:none;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.rmeta.show{display:flex}
-.rmeta-title{font-size:.78rem;font-weight:700;color:var(--muted2);font-family:'DM Mono',monospace}
-.rmeta-title span{color:var(--accent)}
-.rmeta-note{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted)}
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(274px,1fr));gap:14px}
-.card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;animation:up .35s ease both}
-@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.card-tabs{display:flex;border-bottom:1px solid var(--border)}
-.ctab{flex:1;padding:8px 4px;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.07em;background:none;border:none;color:var(--muted);cursor:pointer;transition:color .15s,background .15s;text-transform:uppercase}
-.ctab.on{color:var(--accent);background:rgba(200,241,53,.05)}
-.card-img{aspect-ratio:1;position:relative;background:repeating-conic-gradient(#141414 0% 25%,#0f0f0f 0% 50%) 0 0/16px 16px;overflow:hidden}
-.card-img canvas,.card-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-.proc-ov{position:absolute;inset:0;background:rgba(10,10,10,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;backdrop-filter:blur(3px)}
-.proc-ring{width:36px;height:36px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.proc-lbl{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase}
-.proc-pct{font-size:1.6rem;font-weight:800;letter-spacing:-1px;color:var(--accent);line-height:1}
-.card-err{padding:28px;text-align:center}
-.card-err-icon{font-size:1.8rem;margin-bottom:8px}
-.card-err p{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)}
-.card-foot{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-top:1px solid var(--border);gap:8px}
-.card-name{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
-.card-dl{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:6px 13px;border-radius:6px;background:var(--accent);color:#000;border:none;cursor:pointer;transition:opacity .15s;white-space:nowrap}
-.card-dl:hover{opacity:.8}
-.card-dl:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;opacity:1}
-.how{margin-top:80px;padding-top:56px;border-top:1px solid var(--border)}
-.how-head{font-size:1.6rem;font-weight:800;letter-spacing:-1px;margin-bottom:36px}
-.how-head span{color:var(--accent)}
-.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
-.how-step{padding-top:20px;border-top:1px solid var(--border2)}
-.step-n{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--accent);letter-spacing:.1em;margin-bottom:10px}
-.step-t{font-size:1rem;font-weight:800;letter-spacing:-.3px;margin-bottom:8px}
-.step-d{font-size:.8rem;color:var(--muted2);line-height:1.65;font-weight:400}
-footer{margin-top:80px;padding-top:28px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-footer .logo{font-size:1rem}
-footer p{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted)}
-footer a{color:var(--muted);text-decoration:none;transition:color .15s}
-footer a:hover{color:var(--accent2)}
-@media(max-width:640px){.hero h1{letter-spacing:-2px}.how-grid{grid-template-columns:1fr;gap:20px}.actrow{justify-content:flex-start}nav{padding:20px 0 36px}.tag:not(.lime){display:none}}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove Background from Image — Free, Private, No Upload | CutLocal</title>
+<meta name="description" content="Remove image backgrounds in your browser. Nothing is uploaded — no server, no account, no watermark. Free unlimited PNG, WebP and JPEG exports, batch mode, resize presets.">
+<link rel="canonical" href="%SITE_URL%/">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CutLocal">
+<meta property="og:title" content="CutLocal — remove image backgrounds without uploading them">
+<meta property="og:description" content="AI background removal that runs entirely in your browser. Free, unlimited, no upload, no account.">
+<meta property="og:url" content="%SITE_URL%/">
+<meta property="og:image" content="%SITE_URL%/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CutLocal — remove image backgrounds without uploading them">
+<meta name="twitter:description" content="AI background removal that runs entirely in your browser. Free, unlimited, no upload, no account.">
+<meta name="twitter:image" content="%SITE_URL%/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/src/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "CutLocal",
+  "url": "%SITE_URL%/",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any browser",
+  "browserRequirements": "Requires WebAssembly. Chrome, Edge, Firefox or Safari 17+.",
+  "description": "Free background remover that runs fully in the browser. Images are processed on your device and never uploaded.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Background removal in the browser",
+    "Batch processing",
+    "Transparent PNG, WebP and JPEG export",
+    "Resize, padding and white-background presets",
+    "No upload, no account, no watermark"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Are my images uploaded anywhere?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The AI model runs inside your browser using WebAssembly, so the image you drop is read from local memory and never sent over the network. You can verify it yourself: open your browser's Network tab, process an image, and watch that zero image requests are made. The only downloads are the AI model files, once." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is CutLocal really free and unlimited?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. There is no server doing the work, so there is no per-image cost, no sign-up, no watermark and no daily limit. The whole tool is a static page plus a model file your browser caches." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does it download about 56 MB the first time?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It is downloaded once, cached, and reused on every later visit — including offline. You can pick a larger, more precise model in the settings." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work offline?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, once the engine has been cached. Install CutLocal as an app from your browser's address bar and it keeps working with no connection at all." }
+    },
+    {
+      "@type": "Question",
+      "name": "How good is the cutout quality compared with remove.bg or PhotoRoom?",
+      "acceptedAnswer": { "@type": "Answer", "text": "CutLocal uses the IS-Net segmentation model, the same family of models used by many commercial background removers. On people, products, cars and animals it produces clean edges including hair detail. Very complex edges (fine fur against a busy background, transparent glass) still need manual touch-up, as with any automatic tool." }
+    },
+    {
+      "@type": "Question",
+      "name": "What image formats and sizes are supported?",
+      "acceptedAnswer": { "@type": "Answer", "text": "JPG, PNG, WebP, AVIF, GIF and BMP up to your browser's canvas limits (usually well above 4000 px). You can export PNG with transparency, WebP for smaller files, or JPEG on a solid background, and resize to a square, a fixed longest side or a custom size." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I use the results commercially?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. You keep all rights to your images and the output is yours to use anywhere, including client work and product listings. No attribution is required." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on my phone?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, in Chrome on Android and Safari on iOS 17+. Large models are a big download on mobile data, so the Fast model is the default there." }
+    }
+  ]
+}
+</script>
 </head>
-<body>
+<body data-page="home" data-preset="default">
 <div class="wrap">
-  <nav>
-    <div class="logo"><span class="cut">Cut</span>Local</div>
-    <div class="nav-right">
-      <span class="tag" id="gpu-tag" style="display:none">⚡ WebGPU</span>
-      <span class="tag">No signup</span>
-      <span class="tag lime">100% Private</span>
-    </div>
-  </nav>
-  <div class="hero">
-    <h1>Remove<br><span class="hl">backgrounds.</span><span class="dim">no uploads. no servers. free forever.</span></h1>
-    <p class="hero-sub">AI that runs entirely inside your browser. Your images never leave your device — not even for a millisecond.</p>
+  <!-- include: partials/nav.html -->
+
+  <header class="hero">
+    <h1>Remove image backgrounds<br><span class="hl">without uploading them</span></h1>
+    <p class="hero-sub">A background remover that runs inside your browser. Your photos never touch a server — no upload, no account, no watermark, no limit.</p>
     <div class="hero-pills">
       <span class="tag green">✓ Zero uploads</span>
-      <span class="tag green">✓ No account</span>
-      <span class="tag green">✓ Unlimited images</span>
-      <span class="tag">WebAssembly</span>
-      <span class="tag">WebGPU ready</span>
+      <span class="tag green">✓ Works offline</span>
+      <span class="tag green">✓ Batch + ZIP</span>
+      <span class="tag">PNG · WebP · JPEG</span>
+      <span class="tag">Resize &amp; presets</span>
     </div>
-  </div>
-  <div class="sbar">
-    <div class="sdot loading" id="sdot"></div>
-    <div class="stext">
-      <strong id="stitle">Loading AI engine…</strong>
-      <span id="sdesc">One-time download — cached in your browser after this</span>
-      <div class="sprogress" id="sprog"><div class="sprogress-fill" id="sfill"></div></div>
-    </div>
-  </div>
-  <div class="bgrow" id="bgrow">
-    <span class="bglabel">Background</span>
-    <div class="swatches">
-      <div class="swatch swatch-checker on" data-bg="transparent" title="Transparent"></div>
-      <div class="swatch" style="background:#fff" data-bg="#ffffff" title="White"></div>
-      <div class="swatch" style="background:#000;border-color:#333" data-bg="#000000" title="Black"></div>
-      <div class="swatch" style="background:#f0f0f0" data-bg="#f0f0f0" title="Light gray"></div>
-      <div class="swatch" style="background:#c8f135" data-bg="#c8f135" title="Lime"></div>
-      <div class="swatch" style="background:#1a1a2e" data-bg="#1a1a2e" title="Deep navy"></div>
-      <div class="swatch" style="background:#ff6b6b" data-bg="#ff6b6b" title="Red"></div>
-      <div class="swatch" style="background:#3bf0a0" data-bg="#3bf0a0" title="Mint"></div>
-      <div class="cpick-wrap" title="Custom color">
-        <div class="cpick-display" id="cpick-disp">+</div>
-        <input type="color" id="cpick" value="#a855f7">
+  </header>
+
+  <!-- include: partials/app.html -->
+
+  <section class="section">
+    <h2>How a <span class="hl">local</span> background remover works</h2>
+    <p>Most background removers send your photo to a server, process it there and send back the result. CutLocal downloads the model to you instead, then does the work on your own hardware — the same way a photo editor does.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01 / LOAD</div>
+        <h3>The model comes to you</h3>
+        <p>On first use your browser fetches the IS-Net segmentation model (~44 MB on Fast) and caches it. That is the only download that ever happens.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">02 / RUN</div>
+        <h3>Your CPU does the inference</h3>
+        <p>The model runs in WebAssembly on your machine, building an alpha mask pixel by pixel. Your image data never leaves the tab.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">03 / EXPORT</div>
+        <h3>Full resolution, your format</h3>
+        <p>Add a colour, a photo background, padding, a square crop or a resize. Download one file, copy it to the clipboard, or export the whole batch as ZIP.</p>
       </div>
     </div>
-    <button class="ghost-btn" id="bg-img-btn">↑ Use image</button>
-    <input type="file" id="bginput" accept="image/*" style="display:none">
-    <button class="ghost-btn" id="reprocess-btn" style="display:none">↻ Apply to all</button>
-  </div>
-  <div class="actrow" id="actrow">
-    <button class="btn danger" id="clear-btn">✕ Clear all</button>
-    <button class="btn" id="zip-btn" disabled>↓ Download ZIP</button>
-    <button class="btn lime" id="add-more-btn">+ Add more</button>
-  </div>
-  <div id="dropzone" class="disabled">
-    <input type="file" id="fileinput" accept="image/*" multiple style="display:none">
-    <span class="dz-hex">⬡</span>
-    <div class="dz-title">Drop images here</div>
-    <p class="dz-sub">or click to browse · multiple files supported</p>
-    <div class="dz-formats">
-      <span class="dz-fmt">jpg</span><span class="dz-fmt">png</span><span class="dz-fmt">webp</span>
-      <span class="dz-fmt">gif</span><span class="dz-fmt">bmp</span><span class="dz-fmt">tiff</span>
+  </section>
+
+  <section class="section">
+    <h2>What you can do with it</h2>
+    <div class="tools-grid">
+      <a class="tool-link" href="/white-background"><strong>Product photos on white</strong><span>Marketplace-ready 1080 px squares</span></a>
+      <a class="tool-link" href="/passport-photo"><strong>Passport &amp; ID photos</strong><span>Plain white 600 × 600 background</span></a>
+      <a class="tool-link" href="/transparent-png"><strong>Transparent PNGs</strong><span>Logos, stickers, signatures</span></a>
+      <a class="tool-link" href="/privacy"><strong>How privacy works</strong><span>Verify there are no uploads</span></a>
     </div>
-  </div>
-  <div class="rmeta" id="rmeta">
-    <div class="rmeta-title" id="rtitle">0 images</div>
-    <div class="rmeta-note" id="rnote"></div>
-  </div>
-  <div id="grid"></div>
-  <div class="how">
-    <h2 class="how-head">How it <span>works</span></h2>
-    <div class="how-grid">
-      <div class="how-step">
-        <div class="step-n">01 / MODEL</div>
-        <div class="step-t">Downloads once, cached forever</div>
-        <p class="step-d">The AI model downloads on first visit and is cached by your browser. Every visit after is instant.</p>
-      </div>
-      <div class="how-step">
-        <div class="step-n">02 / INFERENCE</div>
-        <div class="step-t">Your GPU, not ours</div>
-        <p class="step-d">Images are processed in WebAssembly on your machine. Zero network requests for your images. Ever.</p>
-      </div>
-      <div class="how-step">
-        <div class="step-n">03 / OUTPUT</div>
-        <div class="step-t">Full-res PNG, instantly</div>
-        <p class="step-d">Transparent PNG, any background color or image, download one by one or batch ZIP.</p>
-      </div>
+  </section>
+
+  <section class="section">
+    <h2>Questions people ask</h2>
+    <div class="faq">
+      <details><summary>Are my images uploaded anywhere?</summary><p>No. The AI model runs inside your browser using WebAssembly, so the image you drop is read from local memory and never sent over the network. You can verify it yourself: open your browser's Network tab, process an image, and watch that zero image requests are made. The only downloads are the AI model files, once.</p></details>
+      <details><summary>Is CutLocal really free and unlimited?</summary><p>Yes. There is no server doing the work, so there is no per-image cost, no sign-up, no watermark and no daily limit. The whole tool is a static page plus a model file your browser caches.</p></details>
+      <details><summary>Why does it download about 56 MB the first time?</summary><p>The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It is downloaded once, cached, and reused on every later visit — including offline. You can pick a larger, more precise model in the settings.</p></details>
+      <details><summary>Does it work offline?</summary><p>Yes, once the engine has been cached. Install CutLocal as an app from your browser's address bar and it keeps working with no connection at all.</p></details>
+      <details><summary>How good is the cutout quality compared with remove.bg or PhotoRoom?</summary><p>CutLocal uses the IS-Net segmentation model, the same family of models used by many commercial background removers. On people, products, cars and animals it produces clean edges including hair detail. Very complex edges (fine fur against a busy background, transparent glass) still need manual touch-up, as with any automatic tool.</p></details>
+      <details><summary>What image formats and sizes are supported?</summary><p>JPG, PNG, WebP, AVIF, GIF and BMP up to your browser's canvas limits (usually well above 4000 px). You can export PNG with transparency, WebP for smaller files, or JPEG on a solid background, and resize to a square, a fixed longest side or a custom size.</p></details>
+      <details><summary>Can I use the results commercially?</summary><p>Yes. You keep all rights to your images and the output is yours to use anywhere, including client work and product listings. No attribution is required.</p></details>
+      <details><summary>Does it work on my phone?</summary><p>Yes, in Chrome on Android and Safari on iOS 17+. Large models are a big download on mobile data, so the Fast model is the default there.</p></details>
     </div>
-  </div>
-  <footer>
-    <div class="logo"><span class="cut">Cut</span>Local</div>
-    <p>Powered by <a href="https://github.com/imgly/background-removal-js" target="_blank">@imgly/background-removal</a></p>
-    <p>© 2025 · Zero servers · Zero data collected</p>
-  </footer>
+  </section>
+
+  <!-- include: partials/footer.html -->
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

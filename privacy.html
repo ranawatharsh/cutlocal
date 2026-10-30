@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — How CutLocal Keeps Your Images On Your Device</title>
+<meta name="description" content="Exactly what CutLocal sends over the network, what it stores on your device, and how to verify that your images are never uploaded.">
+<link rel="canonical" href="%SITE_URL%/privacy">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="index,follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CutLocal">
+<meta property="og:title" content="Privacy — CutLocal">
+<meta property="og:description" content="No uploads, no accounts, no tracking. Here is exactly what happens on the network, and how to check it yourself.">
+<meta property="og:url" content="%SITE_URL%/privacy">
+<meta property="og:image" content="%SITE_URL%/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/src/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Privacy — CutLocal",
+  "url": "%SITE_URL%/privacy",
+  "description": "What CutLocal sends over the network, what it stores locally, and how to verify no images are uploaded.",
+  "isPartOf": { "@type": "WebApplication", "name": "CutLocal", "url": "%SITE_URL%/" }
+}
+</script>
+</head>
+<body data-page="privacy" data-preset="default">
+<div class="wrap">
+  <!-- include: partials/nav.html -->
+
+  <header class="hero" style="text-align:left;padding-bottom:8px">
+    <h1 style="font-size:clamp(1.9rem,4.6vw,2.9rem)">Privacy, in <span class="hl">plain words</span></h1>
+    <p class="hero-sub" style="margin:0">No accounts, no image uploads, no tracking scripts. This page exists so you can check the claim instead of trusting it.</p>
+  </header>
+
+  <section class="section prose" style="margin-top:32px">
+    <h2>What never leaves your device</h2>
+    <p>Your images. All background removal happens inside the browser tab with WebAssembly. The file is read from disk into memory, the mask is computed locally, and the result is written back to disk by your browser's download mechanism. There is no endpoint that could accept an image, because the app has no backend at all — it is a set of static files.</p>
+
+    <h2>What does get downloaded</h2>
+    <ul>
+      <li>The page itself: HTML, one CSS file and a small JavaScript bundle from this domain.</li>
+      <li>The AI engine the first time you process an image: the ONNX model (about 44 MB on the Fast setting) and the ONNX Runtime WebAssembly build (about 12 MB), served from <code>staticimgly.com</code>.</li>
+      <li>Nothing else. There is no font CDN, no analytics script, no ad network, no pixel.</li>
+    </ul>
+
+    <h2>What is stored on your device</h2>
+    <ul>
+      <li><code>localStorage</code> — your export preferences (format, quality, size preset, padding, chosen model). A few hundred bytes, and only if you change something.</li>
+      <li>HTTP cache and Cache Storage — the model files, so the next visit starts instantly and works offline.</li>
+      <li>Nothing else. No cookies, no identifiers, no fingerprinting.</li>
+    </ul>
+
+    <h2>How to verify it in 20 seconds</h2>
+    <p>Open DevTools (<code>F12</code> or <code>Cmd ⌥ I</code>), go to the <strong>Network</strong> tab, then drop an image onto the tool. You will see the model request the first time, and nothing at all while the image is processed. No request carries your file. If that is ever not true, it is a bug — please report it.</p>
+    <p>You can also disconnect from the internet after the model has loaded and keep working: the app is served by a service worker and the model is cached.</p>
+
+    <h2>Why this design</h2>
+    <p>Server-side background removal has a cost per image, which is why most services cap usage, add watermarks or require an account. Running the model on the visitor's machine removes that cost entirely — and, as a side effect, removes the need to collect anything at all. Local processing is both the privacy story and the business model.</p>
+
+    <h2>Third parties</h2>
+    <p>Model files are hosted by IMG.LY (<code>staticimgly.com</code>), the authors of the open-source engine. That request reveals your IP address and the model file you asked for, in the same way any CDN request does. It contains no image data. If you would rather avoid it entirely, the engine can be self-hosted — see the <a href="https://github.com/imgly/background-removal-js" rel="noopener" target="_blank">project documentation</a>.</p>
+
+    <h2>Contact</h2>
+    <p>Questions or a correction? Open an issue on the project repository. There is no mailing list and no account to delete.</p>
+  </section>
+
+  <!-- include: partials/footer.html -->
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

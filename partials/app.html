@@ -1,0 +1,110 @@
+<main class="tool" id="tool">
+  <input type="file" id="fileinput" accept="image/*" multiple hidden>
+  <input type="file" id="bg-input" accept="image/*" hidden>
+
+  <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Add images to remove their background">
+    <span class="dz-hex" aria-hidden="true">⬡</span>
+    <span class="dz-title" id="dz-title">Drop images here</span>
+    <span class="dz-sub">or click to browse · paste with Ctrl/⌘ + V</span>
+    <span class="dz-formats"><i>jpg</i><i>png</i><i>webp</i><i>avif</i><i>gif</i><i>bmp</i></span>
+    <span class="dz-note">Nothing is uploaded — ever.</span>
+  </div>
+
+  <div class="status" id="status" data-state="idle">
+    <span class="status-dot" aria-hidden="true"></span>
+    <div class="status-body">
+      <strong id="status-title">AI engine not loaded yet</strong>
+      <span id="status-desc">It downloads once (~56 MB) the first time you add an image, then it is cached and works offline.</span>
+      <div class="bar" id="status-bar" hidden><span class="bar-fill" id="status-fill"></span></div>
+    </div>
+    <button type="button" class="btn btn-ghost" id="load-engine">Load AI now</button>
+  </div>
+
+  <div class="panel" id="panel" hidden>
+    <div class="panel-row">
+      <span class="plabel">Background</span>
+      <div class="swatches" id="swatches">
+        <button type="button" class="swatch swatch-checker is-on" data-bg="transparent" title="Transparent" aria-label="Transparent"></button>
+        <button type="button" class="swatch" style="--c:#ffffff" data-color="#ffffff" title="White" aria-label="White"></button>
+        <button type="button" class="swatch" style="--c:#000000" data-color="#000000" title="Black" aria-label="Black"></button>
+        <button type="button" class="swatch" style="--c:#f0f0f0" data-color="#f0f0f0" title="Light grey" aria-label="Light grey"></button>
+        <button type="button" class="swatch" style="--c:#1a1a2e" data-color="#1a1a2e" title="Navy" aria-label="Navy"></button>
+        <button type="button" class="swatch" style="--c:#c8f135" data-color="#c8f135" title="Lime" aria-label="Lime"></button>
+        <button type="button" class="swatch" style="--c:#3bf0a0" data-color="#3bf0a0" title="Mint" aria-label="Mint"></button>
+        <button type="button" class="swatch" style="--c:#ff6b6b" data-color="#ff6b6b" title="Coral" aria-label="Coral"></button>
+        <label class="swatch swatch-custom" title="Custom colour">
+          <input type="color" id="cpick" value="#a855f7" aria-label="Custom background colour">
+          <span aria-hidden="true">+</span>
+        </label>
+        <button type="button" class="chip" id="bg-image-btn">Image…</button>
+        <button type="button" class="chip" id="bg-clear-image" hidden>Remove image</button>
+        <label class="check" id="bg-blur-wrap" hidden><input type="checkbox" id="bg-blur"> Blur</label>
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <span class="plabel">Size</span>
+      <select id="size-preset" aria-label="Output size">
+        <option value="original">Original size</option>
+        <option value="long2048">Longest side 2048 px</option>
+        <option value="long1024">Longest side 1024 px</option>
+        <option value="sq1080">Square 1080 × 1080</option>
+        <option value="sq600">Square 600 × 600 (ID photo)</option>
+        <option value="og">Social 1200 × 630</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <span class="custom-size" id="custom-size" hidden>
+        <input type="number" id="custom-w" value="1200" min="16" max="6000" step="1" aria-label="Width in pixels"> ×
+        <input type="number" id="custom-h" value="1200" min="16" max="6000" step="1" aria-label="Height in pixels">
+      </span>
+      <span class="dim-note" id="size-note"></span>
+    </div>
+
+    <div class="panel-row">
+      <span class="plabel">Padding</span>
+      <input type="range" id="padding" min="0" max="25" step="1" value="0" aria-label="Padding around the subject">
+      <output id="padding-val">0%</output>
+      <label class="check"><input type="checkbox" id="shadow"> Drop shadow</label>
+      <label class="check"><input type="checkbox" id="trim"> Trim transparent edges</label>
+    </div>
+
+    <div class="panel-row">
+      <span class="plabel">Export</span>
+      <select id="format" aria-label="File format">
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP (smaller)</option>
+        <option value="image/jpeg">JPEG</option>
+      </select>
+      <span id="quality-wrap" hidden>Quality <input type="range" id="quality" min="40" max="100" step="1" value="92" aria-label="JPEG/WebP quality"> <output id="quality-val">92</output></span>
+      <span class="plabel" style="width:auto">Model</span>
+      <select id="model" aria-label="AI model">
+        <option value="fast">Fast · ~56 MB</option>
+        <option value="balanced">Balanced · ~100 MB</option>
+        <option value="best">Best · ~188 MB</option>
+      </select>
+      <button type="button" class="chip" id="rerun" hidden>↻ Re-run AI</button>
+    </div>
+
+    <div class="panel-row">
+      <span class="plabel">Names</span>
+      <input type="text" id="prefix" placeholder="Optional prefix" maxlength="40" aria-label="Optional filename prefix">
+      <span class="dim-note">Original filenames are kept</span>
+    </div>
+  </div>
+
+  <div class="actrow" id="actrow" hidden>
+    <button type="button" class="btn danger" id="clear-btn">✕ Clear all</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="add-more-btn">+ Add images</button>
+    <button type="button" class="btn lime" id="zip-btn" disabled>↓ Download ZIP</button>
+  </div>
+
+  <div class="rmeta" id="rmeta" hidden>
+    <span class="rmeta-title" id="rtitle"><b>0</b> images</span>
+    <span class="rmeta-note" id="rnote"></span>
+  </div>
+
+  <div id="grid" aria-live="polite"></div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>

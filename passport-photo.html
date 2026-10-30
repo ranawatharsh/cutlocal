@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passport Photo Background Remover — White Background, Local | CutLocal</title>
+<meta name="description" content="Replace a passport or ID photo background with plain white, sized to 600 × 600, entirely in your browser. No upload, no account, free.">
+<link rel="canonical" href="%SITE_URL%/passport-photo">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CutLocal">
+<meta property="og:title" content="Passport photo background remover — CutLocal">
+<meta property="og:description" content="Plain white ID photo backgrounds, sized and exported on your own device. Nothing is uploaded.">
+<meta property="og:url" content="%SITE_URL%/passport-photo">
+<meta property="og:image" content="%SITE_URL%/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Passport photo background remover — CutLocal">
+<meta name="twitter:description" content="Plain white ID photo backgrounds, sized and exported on your own device. Nothing is uploaded.">
+<meta name="twitter:image" content="%SITE_URL%/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/src/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "CutLocal Passport Photo Background Remover",
+  "url": "%SITE_URL%/passport-photo",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any browser",
+  "description": "Replace passport and ID photo backgrounds with white, locally in the browser.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "isPartOf": { "@type": "WebApplication", "name": "CutLocal", "url": "%SITE_URL%/" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I change the background of a passport photo online safely?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Only if the photo never leaves your device. Passport photos are identity documents, so uploading them to an unknown service is a real privacy risk. CutLocal processes the image in your browser: the file is read from disk, segmented locally and written back to disk. Nothing is sent to a server, which you can confirm in your browser's Network tab." }
+    },
+    {
+      "@type": "Question",
+      "name": "What size should a passport photo be?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Requirements vary: the US asks for 2 × 2 inches (600 × 600 px at 300 dpi), the UK and most of the EU ask for 35 × 45 mm (413 × 531 px at 300 dpi), India asks for 2 × 2 inches. This page presets 600 × 600 with a white background; switch the size preset to Custom to enter 413 × 531 or your country's exact figure." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which background colour is accepted?",
+      "acceptedAnswer": { "@type": "Answer", "text": "White or off-white for most countries, including the US, UK, Canada, Australia and India. A few countries accept light blue or light grey. Pick white first, and only change it if your specific authority asks for another colour." }
+    },
+    {
+      "@type": "Question",
+      "name": "Will the cutout keep my hair edges intact?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The IS-Net model produces soft alpha edges, so flyaway hair is mostly preserved. For official photos, check the result at 100% zoom: authorities reject visible halos or a cut-out look. A clean, evenly lit photo against a plain wall gives the best result." }
+    }
+  ]
+}
+</script>
+</head>
+<body data-page="passport" data-preset="passport">
+<div class="wrap">
+  <!-- include: partials/nav.html -->
+
+  <header class="hero">
+    <h1>Passport photo <span class="hl">white background</span>, without uploading your face</h1>
+    <p class="hero-sub">Identity photos are the last thing you should hand to a random website. Cut the background out here — it happens inside your browser and stays on your device.</p>
+    <div class="hero-pills">
+      <span class="tag green">✓ Never uploaded</span>
+      <span class="tag green">✓ 600 × 600 preset</span>
+      <span class="tag green">✓ Plain white</span>
+      <span class="tag">Works offline</span>
+    </div>
+  </header>
+
+  <!-- include: partials/app.html -->
+
+  <section class="section">
+    <h2>From phone photo to <span class="hl">ID-ready</span> in a minute</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01 / DROP</div>
+        <h3>Use a well-lit photo</h3>
+        <p>A plain wall behind you, even light on your face, no harsh shadow. The better the original, the cleaner the edge.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">02 / PRESET</div>
+        <h3>White, 600 × 600, JPEG</h3>
+        <p>This page already selects a white background and a 2 × 2 inch canvas at 300 dpi. For 35 × 45 mm, switch to Custom and enter 413 × 531.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">03 / CHECK</div>
+        <h3>Zoom in before you print</h3>
+        <p>Compare the result with the original, confirm there is no halo around your hair, then download at full resolution.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section prose">
+    <h2>Why identity photos deserve local processing</h2>
+    <p>A passport photo is a biometric template: a straight-on view of your face, usually with your name attached to the file. Uploading it to a free background remover means trusting a stranger's retention policy, and "we delete uploads after one hour" is not something you can verify.</p>
+    <p>CutLocal flips the model around. The AI weights come to you, the pixels stay where they are, and there is no server that could keep a copy even if it wanted to. That is also why it keeps working offline, on a plane, or on a locked-down work laptop.</p>
+    <p>Practical notes for a photo that gets accepted:</p>
+    <ul>
+      <li>Face centred, eyes open, neutral expression, no glasses glare.</li>
+      <li>No shadow behind the head — the background remover can't invent an even backdrop if the subject was lit from one side.</li>
+      <li>Keep the natural head size; cropping too tight is a common rejection reason.</li>
+      <li>Export as high-quality JPEG, then check the printed size your authority asks for.</li>
+    </ul>
+    <p>CutLocal is not a visa service and does not guarantee acceptance — always check your authority's current rules.</p>
+  </section>
+
+  <section class="section">
+    <h2>Questions people ask</h2>
+    <div class="faq">
+      <details><summary>Can I change the background of a passport photo online safely?</summary><p>Only if the photo never leaves your device. Passport photos are identity documents, so uploading them to an unknown service is a real privacy risk. CutLocal processes the image in your browser: the file is read from disk, segmented locally and written back to disk. Nothing is sent to a server, which you can confirm in your browser's Network tab.</p></details>
+      <details><summary>What size should a passport photo be?</summary><p>Requirements vary: the US asks for 2 × 2 inches (600 × 600 px at 300 dpi), the UK and most of the EU ask for 35 × 45 mm (413 × 531 px at 300 dpi), India asks for 2 × 2 inches. This page presets 600 × 600 with a white background; switch the size preset to Custom to enter 413 × 531 or your country's exact figure.</p></details>
+      <details><summary>Which background colour is accepted?</summary><p>White or off-white for most countries, including the US, UK, Canada, Australia and India. A few countries accept light blue or light grey. Pick white first, and only change it if your specific authority asks for another colour.</p></details>
+      <details><summary>Will the cutout keep my hair edges intact?</summary><p>The IS-Net model produces soft alpha edges, so flyaway hair is mostly preserved. For official photos, check the result at 100% zoom: authorities reject visible halos or a cut-out look. A clean, evenly lit photo against a plain wall gives the best result.</p></details>
+    </div>
+  </section>
+
+  <!-- include: partials/footer.html -->
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

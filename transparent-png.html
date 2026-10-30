@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transparent PNG Maker — Remove Background Locally, Free | CutLocal</title>
+<meta name="description" content="Turn any image into a transparent PNG in your browser. Logos, signatures, stickers and product shots with real alpha edges. No upload, no watermark.">
+<link rel="canonical" href="%SITE_URL%/transparent-png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CutLocal">
+<meta property="og:title" content="Transparent PNG maker — remove backgrounds locally">
+<meta property="og:description" content="Real alpha transparency for logos, signatures and product shots. Processed on your device, nothing uploaded.">
+<meta property="og:url" content="%SITE_URL%/transparent-png">
+<meta property="og:image" content="%SITE_URL%/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Transparent PNG maker — remove backgrounds locally">
+<meta name="twitter:description" content="Real alpha transparency for logos, signatures and product shots. Processed on your device, nothing uploaded.">
+<meta name="twitter:image" content="%SITE_URL%/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/src/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "CutLocal Transparent PNG Maker",
+  "url": "%SITE_URL%/transparent-png",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any browser",
+  "description": "Create transparent PNG images from any photo, locally in the browser.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "isPartOf": { "@type": "WebApplication", "name": "CutLocal", "url": "%SITE_URL%/" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I make a PNG with a transparent background?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Drop the image here. The AI separates the subject from the background and returns an image with an alpha channel, which is then exported as PNG. Keep the format set to PNG — JPEG cannot store transparency, so any transparent area becomes white." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on logos and signatures?",
+      "acceptedAnswer": { "@type": "Answer", "text": "It works best on logos and signatures that sit on a plain, even background — a white page, a solid colour. The model is trained on photographic subjects, so a flat logo with sharp vector edges can come back slightly softened. For clean line art, a magic-wand style tool is often better; for photos, stickers and product shots this tool is the right one." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is my PNG so much larger than the JPEG?",
+      "acceptedAnswer": { "@type": "Answer", "text": "PNG is lossless, so it stores every pixel exactly. A photographic cutout can be several megabytes. Switch the export format to WebP to keep transparency at roughly a third of the size — it is supported by every current browser and by Figma, Canva and Photoshop." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a watermark or a size limit?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No watermark, no resolution limit beyond your browser's canvas limits, and no per-day cap. The tool is a static page: there is no server to meter you." }
+    }
+  ]
+}
+</script>
+</head>
+<body data-page="transparent" data-preset="transparent">
+<div class="wrap">
+  <!-- include: partials/nav.html -->
+
+  <header class="hero">
+    <h1>Make a <span class="hl">transparent PNG</span> from any image</h1>
+    <p class="hero-sub">Real alpha transparency — not a white box pretending to be one. The cutout is generated on your device, so the original never leaves it.</p>
+    <div class="hero-pills">
+      <span class="tag green">✓ True alpha channel</span>
+      <span class="tag green">✓ No watermark</span>
+      <span class="tag green">✓ Full resolution</span>
+      <span class="tag">PNG · WebP</span>
+    </div>
+  </header>
+
+  <!-- include: partials/app.html -->
+
+  <section class="section">
+    <h2>How to get a <span class="hl">clean</span> cutout</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01 / DROP</div>
+        <h3>Add the image</h3>
+        <p>Drag a file in, paste from the clipboard, or click to browse. This page keeps the transparent background and the original dimensions by default.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">02 / REVIEW</div>
+        <h3>Drag the compare slider</h3>
+        <p>Switch a card to Compare and drag the divider to check edges against the original. Fine hair and fur are where cutouts usually fail.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">03 / EXPORT</div>
+        <h3>PNG or WebP</h3>
+        <p>PNG is lossless and universal. WebP keeps the alpha channel with a much smaller file — handy for websites and app assets.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section prose">
+    <h2>Transparency, explained in one paragraph</h2>
+    <p>A transparent image stores a fourth value per pixel — alpha — that says how opaque it is. JPEG has no alpha channel at all, which is why "transparent JPEG" is a contradiction and why a JPEG export of a cutout always comes out on a solid colour. PNG supports full 8-bit alpha, WebP supports it too, and both are handled natively by every modern browser, Figma, Canva, Illustrator and Photoshop.</p>
+    <p>Two things are worth knowing before you export:</p>
+    <ul>
+      <li><strong>Edges are anti-aliased.</strong> A good cutout has semi-transparent pixels at the border, which is what stops it looking like a paper cut-out. Don't run a hard threshold on it afterwards.</li>
+      <li><strong>File size is dominated by the photo.</strong> A 4000 px cutout is heavy in PNG. For web use, resize to the longest side you actually need — 1024 or 2048 px is usually plenty — and export WebP.</li>
+    </ul>
+    <p>If you are preparing assets for a dark UI, check the result on a dark background as well as the checkerboard: light halos from the original background are much easier to spot there.</p>
+  </section>
+
+  <section class="section">
+    <h2>Questions people ask</h2>
+    <div class="faq">
+      <details><summary>How do I make a PNG with a transparent background?</summary><p>Drop the image here. The AI separates the subject from the background and returns an image with an alpha channel, which is then exported as PNG. Keep the format set to PNG — JPEG cannot store transparency, so any transparent area becomes white.</p></details>
+      <details><summary>Does it work on logos and signatures?</summary><p>It works best on logos and signatures that sit on a plain, even background — a white page, a solid colour. The model is trained on photographic subjects, so a flat logo with sharp vector edges can come back slightly softened. For clean line art, a magic-wand style tool is often better; for photos, stickers and product shots this tool is the right one.</p></details>
+      <details><summary>Why is my PNG so much larger than the JPEG?</summary><p>PNG is lossless, so it stores every pixel exactly. A photographic cutout can be several megabytes. Switch the export format to WebP to keep transparency at roughly a third of the size — it is supported by every current browser and by Figma, Canva and Photoshop.</p></details>
+      <details><summary>Is there a watermark or a size limit?</summary><p>No watermark, no resolution limit beyond your browser's canvas limits, and no per-day cap. The tool is a static page: there is no server to meter you.</p></details>
+    </div>
+  </section>
+
+  <!-- include: partials/footer.html -->
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
