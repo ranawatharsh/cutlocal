@@ -18,7 +18,7 @@ export const MODELS = {
 };
 
 /** ONNX Runtime WebAssembly build, downloaded once alongside the model. */
-const RUNTIME_MB = 12;
+export const RUNTIME_MB = 12;
 
 let libPromise = null;
 let readyKey = null;

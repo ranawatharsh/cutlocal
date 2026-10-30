@@ -1,4 +1,4 @@
-import { loadEngine, removeBackground, onProgress, isReady, progressLabel, totalDownloadMB, MODELS } from './engine.js';
+import { loadEngine, removeBackground, onProgress, isReady, progressLabel, totalDownloadMB, MODELS, RUNTIME_MB } from './engine.js';
 import { DEFAULTS, PRESETS, drawResult, drawOriginal, loadImage, outDims, sourceRect, computeTrimBox } from './editor.js';
 import { exportCard, exportZip, copyCard } from './download.js';
 
@@ -77,6 +77,7 @@ function init() {
     rnote: $('#rnote'),
     grid: $('#grid'),
     toast: $('#toast'),
+    dzNote: $('#dz-note'),
     year,
   };
 
@@ -88,6 +89,7 @@ function init() {
   syncControls();
   bindEvents();
   onProgress(handleEngineProgress);
+  autoPreload();
 
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {
@@ -302,19 +304,56 @@ function setStatus(kind, title, desc, pct) {
     el.statusFill.style.width = `${Math.max(2, Math.min(100, pct))}%`;
   }
   el.loadEngineBtn.hidden = kind === 'loading' || kind === 'ready';
+
+  if (el.dzNote) {
+    el.dzNote.textContent =
+      kind === 'loading'
+        ? 'AI warming up — add images now, they process the moment it is ready'
+        : 'Nothing is uploaded — ever.';
+  }
 }
 
 function updateStatusIdle() {
   if (state.engineBusy) return;
   if (isReady(state.model, state.device)) {
-    setStatus('ready', 'AI engine ready', `Cached · ${MODELS[state.model].label} model · nothing is uploaded`);
+    setStatus('ready', 'AI engine ready', `${MODELS[state.model].label} model cached · drop images below`);
   } else {
     setStatus(
       'idle',
       'AI engine not loaded yet',
-      `It downloads once (~${totalDownloadMB(state.model)} MB) when you add an image, then it is cached and works offline.`
+      `One-time ${totalDownloadMB(state.model)} MB download. Tap to start, or just add an image.`
     );
   }
+}
+
+// Rolling download-speed estimate for the "about Ns left" line.
+const speed = { t: 0, pct: 0, ema: 0 };
+
+function resetSpeed() {
+  speed.t = 0;
+  speed.pct = 0;
+  speed.ema = 0;
+}
+
+function etaText(pct) {
+  const now = performance.now();
+  if (!speed.t) {
+    speed.t = now;
+    speed.pct = pct;
+    return 'starting…';
+  }
+  const dt = now - speed.t;
+  if (dt > 1200) {
+    const sample = Math.max(0.5, pct - speed.pct) / dt; // percent per ms
+    speed.ema = speed.ema ? speed.ema * 0.6 + sample * 0.4 : sample;
+    speed.t = now;
+    speed.pct = pct;
+  }
+  if (!speed.ema || pct >= 99) return pct >= 99 ? 'almost done' : 'starting…';
+  const left = (100 - pct) / speed.ema / 1000;
+  if (left < 1.5) return 'almost done';
+  if (left > 120) return 'a few minutes left';
+  return `about ${Math.round(left)}s left`;
 }
 
 function handleEngineProgress(key, current, total) {
@@ -328,18 +367,62 @@ function handleEngineProgress(key, current, total) {
   }
 
   // Runtime files arrive first (~20% of the total), then the model.
-  const weighted = key.includes('/models/') ? 20 + ratio * 80 : ratio * 20;
+  const isModel = key.includes('/models/');
+  const weighted = isModel ? 20 + ratio * 80 : ratio * 20;
+
   if (state.engineBusy) {
-    setStatus('loading', progressLabel(key), `${Math.round(weighted)}% · one-time download, cached afterwards`, weighted);
+    const mb = current / 1048576;
+    const totalMb = isModel ? MODELS[state.model].modelMB : RUNTIME_MB;
+    setStatus(
+      'loading',
+      progressLabel(key),
+      `${Math.max(1, Math.round(mb))} of ${totalMb} MB · ${etaText(weighted)} · one-time, then cached`,
+      weighted
+    );
   }
   if (state.activeCard) setCardProgress(state.activeCard, Math.round(weighted));
 }
 
 function maybePreload() {
-  if (isReady(state.model, state.device) || state.engineBusy) return;
-  const conn = navigator.connection;
-  if (conn && (conn.saveData || /2g/.test(conn.effectiveType || ''))) return;
+  if (isReady(state.model, state.device) || state.engineBusy || enginePromise) return;
   startEngine({ announce: false }).catch(() => {});
+}
+
+/**
+ * Kick the model download off as soon as the page has painted, so the
+ * engine is usually ready before the visitor has picked a file.
+ *
+ * Skipped when the visitor is on a metered or genuinely slow connection —
+ * a 56 MB download behind someone's 3G is worse than a button.
+ */
+function autoPreload() {
+  if (isReady(state.model, state.device) || enginePromise) return;
+
+  const conn = navigator.connection;
+  if (conn?.saveData) {
+    setStatus('idle', 'AI engine paused', 'Your browser asked sites not to download large files (Save-Data). Tap to load it, or just add an image.');
+    return;
+  }
+  if (/^(slow-)?2g$|^3g$/.test(conn?.effectiveType || '')) {
+    setStatus('idle', 'AI engine not loaded yet', `You are on a slow connection — the engine is ${totalDownloadMB(state.model)} MB. Tap to start, or just add an image.`);
+    return;
+  }
+
+  const start = () => {
+    // A touch of delay so the hero paints first; the fetch is parallel anyway.
+    startEngine({ announce: true }).catch(() => {});
+  };
+
+  // Announce immediately so the bar never shows "not loaded" and then flips.
+  announceEngine();
+
+  if (document.readyState === 'complete') {
+    setTimeout(start, 120);
+  } else {
+    window.addEventListener('load', () => setTimeout(start, 120), { once: true });
+    // Don't let a stalled third-party asset hold the model back.
+    setTimeout(start, 2000);
+  }
 }
 
 /**
@@ -353,6 +436,7 @@ function startEngine({ announce = true } = {}) {
   }
 
   state.engineBusy = true;
+  resetSpeed();
   announceEngine();
 
   enginePromise = loadEngine(state.model, state.device)
@@ -375,7 +459,7 @@ function startEngine({ announce = true } = {}) {
 }
 
 function announceEngine() {
-  setStatus('loading', 'Loading AI engine…', `About ${totalDownloadMB(state.model)} MB, downloaded once and cached`, 0);
+  setStatus('loading', 'Loading AI engine…', `About ${totalDownloadMB(state.model)} MB, one-time and cached afterwards`, 0);
 }
 
 // ── Files + queue ──────────────────────────────────────────────────────────

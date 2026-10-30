@@ -28,7 +28,7 @@ npm run build    # dist/
 npm run preview  # serve dist/ locally
 ```
 
-The AI model is **not** downloaded on page load. It starts when the visitor drops an image, clicks "Load AI now", or opens the file picker. That keeps the landing page fast and stops mobile users on data from paying for a 56 MB download they never asked for.
+The AI model is **not** a blocking download: the page renders first, then the engine starts fetching in the background on load so it is ready by the time the visitor picks a photo. It is skipped entirely when the browser sends `Save-Data` or reports a 2G/3G connection, in which case the "Load AI now" button (or simply adding an image) starts it.
 
 ## Deploying
 

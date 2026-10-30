@@ -7,14 +7,14 @@
     <span class="dz-title" id="dz-title">Drop images here</span>
     <span class="dz-sub">or click to browse · paste with Ctrl/⌘ + V</span>
     <span class="dz-formats"><i>jpg</i><i>png</i><i>webp</i><i>avif</i><i>gif</i><i>bmp</i></span>
-    <span class="dz-note">Nothing is uploaded — ever.</span>
+    <span class="dz-note" id="dz-note">Nothing is uploaded — ever.</span>
   </div>
 
   <div class="status" id="status" data-state="idle">
     <span class="status-dot" aria-hidden="true"></span>
     <div class="status-body">
       <strong id="status-title">AI engine not loaded yet</strong>
-      <span id="status-desc">It downloads once (~56 MB) the first time you add an image, then it is cached and works offline.</span>
+      <span id="status-desc">Starts loading as soon as the page opens (~56 MB once), then it is cached and works offline.</span>
       <div class="bar" id="status-bar" hidden><span class="bar-fill" id="status-fill"></span></div>
     </div>
     <button type="button" class="btn btn-ghost" id="load-engine">Load AI now</button>

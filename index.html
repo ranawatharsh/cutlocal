@@ -23,6 +23,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://staticimgly.com" crossorigin>
+<link rel="dns-prefetch" href="https://staticimgly.com">
 <link rel="stylesheet" href="/src/style.css">
 <script type="application/ld+json">
 {
@@ -62,7 +64,7 @@
     {
       "@type": "Question",
       "name": "Why does it download about 56 MB the first time?",
-      "acceptedAnswer": { "@type": "Answer", "text": "The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It is downloaded once, cached, and reused on every later visit — including offline. You can pick a larger, more precise model in the settings." }
+      "acceptedAnswer": { "@type": "Answer", "text": "The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It starts downloading as soon as the page opens, so it is usually ready by the time you pick a photo, and it is cached for every later visit — including offline. You can pick a larger, more precise model in the settings." }
     },
     {
       "@type": "Question",
@@ -118,7 +120,7 @@
       <div class="step">
         <div class="step-n">01 / LOAD</div>
         <h3>The model comes to you</h3>
-        <p>On first use your browser fetches the IS-Net segmentation model (~44 MB on Fast) and caches it. That is the only download that ever happens.</p>
+        <p>By the time the page has painted, your browser is already fetching the IS-Net model (~44 MB on the Fast setting) and caching it. That is the only download that ever happens.</p>
       </div>
       <div class="step">
         <div class="step-n">02 / RUN</div>
@@ -148,7 +150,7 @@
     <div class="faq">
       <details><summary>Are my images uploaded anywhere?</summary><p>No. The AI model runs inside your browser using WebAssembly, so the image you drop is read from local memory and never sent over the network. You can verify it yourself: open your browser's Network tab, process an image, and watch that zero image requests are made. The only downloads are the AI model files, once.</p></details>
       <details><summary>Is CutLocal really free and unlimited?</summary><p>Yes. There is no server doing the work, so there is no per-image cost, no sign-up, no watermark and no daily limit. The whole tool is a static page plus a model file your browser caches.</p></details>
-      <details><summary>Why does it download about 56 MB the first time?</summary><p>The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It is downloaded once, cached, and reused on every later visit — including offline. You can pick a larger, more precise model in the settings.</p></details>
+      <details><summary>Why does it download about 56 MB the first time?</summary><p>The neural network that separates the subject from the background has to be on your device to run locally. The Fast model is about 44 MB and the browser engine files about 12 MB. It starts downloading as soon as the page opens, so it is usually ready by the time you pick a photo, and it is cached for every later visit — including offline. You can pick a larger, more precise model in the settings.</p></details>
       <details><summary>Does it work offline?</summary><p>Yes, once the engine has been cached. Install CutLocal as an app from your browser's address bar and it keeps working with no connection at all.</p></details>
       <details><summary>How good is the cutout quality compared with remove.bg or PhotoRoom?</summary><p>CutLocal uses the IS-Net segmentation model, the same family of models used by many commercial background removers. On people, products, cars and animals it produces clean edges including hair detail. Very complex edges (fine fur against a busy background, transparent glass) still need manual touch-up, as with any automatic tool.</p></details>
       <details><summary>What image formats and sizes are supported?</summary><p>JPG, PNG, WebP, AVIF, GIF and BMP up to your browser's canvas limits (usually well above 4000 px). You can export PNG with transparency, WebP for smaller files, or JPEG on a solid background, and resize to a square, a fixed longest side or a custom size.</p></details>

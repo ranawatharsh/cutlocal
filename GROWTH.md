@@ -28,7 +28,7 @@ Three audiences care disproportionately about local processing, and they are und
 
 | Problem before | Now |
 | --- | --- |
-| 44 MB model auto-downloaded on page load, before the visitor did anything | Lazy: starts on file drop / picker open / "Load AI now". Landing page loads in ~22 kB JS |
+| 44 MB model auto-downloaded on page load, blocking nothing but wasting everyone's data | Starts after first paint, skipped on Save-Data/2G/3G, real MB + ETA, instant on repeat visits |
 | Progress bar was faked with `setInterval` | Real byte progress from the library, weighted runtime → model |
 | Google Fonts request on a "zero data collected" site | System fonts only. No third-party requests except the model |
 | 176 MB model was hard-coded (`isnet`) | Fast (44 MB) / Balanced / Best selectable, Fast default |

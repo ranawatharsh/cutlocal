@@ -45,9 +45,10 @@
     <h2>What does get downloaded</h2>
     <ul>
       <li>The page itself: HTML, one CSS file and a small JavaScript bundle from this domain.</li>
-      <li>The AI engine the first time you process an image: the ONNX model (about 44 MB on the Fast setting) and the ONNX Runtime WebAssembly build (about 12 MB), served from <code>staticimgly.com</code>.</li>
+      <li>The AI engine, which starts downloading as soon as the page opens so it is ready when you are: the ONNX model (about 44 MB on the Fast setting) and the ONNX Runtime WebAssembly build (about 12 MB), served from <code>staticimgly.com</code>. It is cached, so this happens once.</li>
       <li>Nothing else. There is no font CDN, no analytics script, no ad network, no pixel.</li>
     </ul>
+    <p>If you are on a metered connection, turn on your browser's <strong>Save-Data</strong> setting (or Lite mode) and the download will wait until you press "Load AI now" or add an image.</p>
 
     <h2>What is stored on your device</h2>
     <ul>
